@@ -1,0 +1,311 @@
+/* جعل كل العناصر تتناسب مع أي شاشة */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* جعل الصور والعناصر مرنة */
+img, video, iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+/* تنسيق عام للجسم */
+body {
+    font-family: 'Poppins', 'Cairo', 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0a1a2f 50%, #0d1117 100%);
+    min-height: 100vh;
+    padding: 15px;
+    color: #fff;
+}
+
+/* حاوية الموقع */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 10px;
+}
+
+/* شريط التنقل - مرن */
+.navbar {
+    background: rgba(15, 25, 45, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+.navbar a {
+    text-decoration: none;
+    color: #00ffff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.navbar a:hover {
+    background: rgba(0, 255, 255, 0.2);
+}
+
+/* البطاقات */
+.cards {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: rgba(20, 30, 50, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 280px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    border-color: #00ffff;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+}
+
+.card .icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+}
+
+.card h2, .card h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #00ffff;
+}
+
+.card p {
+    font-size: 14px;
+    color: #ccc;
+}
+
+/* الصناديق */
+.form-box {
+    background: rgba(20, 30, 50, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    overflow-x: auto;
+}
+
+.form-box h2, .form-box h3 {
+    color: #00ffff;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+/* المدخلات */
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    background: rgba(10, 15, 25, 0.9);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 12px;
+    font-size: 14px;
+    color: #fff;
+}
+
+/* الأزرار */
+button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(90deg, #00ffff, #0066ff);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+}
+
+/* الجداول - جعلها قابلة للتمرير */
+table {
+    width: 100%;
+    min-width: 600px;
+    background: rgba(10, 15, 25, 0.6);
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+}
+
+/* التنبيهات */
+.alert {
+    padding: 10px;
+    border-radius: 10px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.alert-success {
+    background: rgba(0, 255, 0, 0.2);
+    color: #00ff00;
+    border: 1px solid #00ff00;
+}
+
+.alert-error {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+/* بطاقات العمال */
+.worker-card {
+    background: rgba(15, 25, 45, 0.7);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    cursor: pointer;
+}
+
+.worker-card:hover {
+    transform: translateX(5px);
+    border-color: #00ffff;
+}
+
+/* صفوف التقارير */
+.worker-row {
+    cursor: pointer;
+}
+
+.worker-row:hover {
+    background: rgba(0, 255, 255, 0.2);
+}
+
+/* مجموعة الحقول المرنة */
+.form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.form-row > * {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* ========== */
+/* للشاشات الصغيرة (التليفونات) */
+/* ========== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .navbar {
+        justify-content: flex-start;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+    
+    .navbar a {
+        font-size: 12px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+    
+    .card {
+        width: 100%;
+        max-width: 300px;
+        padding: 20px;
+    }
+    
+    .card .icon {
+        font-size: 40px;
+    }
+    
+    .card h2, .card h3 {
+        font-size: 18px;
+    }
+    
+    .form-box {
+        padding: 15px;
+    }
+    
+    input, select, button {
+        font-size: 14px;
+        padding: 10px;
+    }
+    
+    th, td {
+        font-size: 11px;
+        padding: 6px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .form-row > * {
+        width: 100%;
+    }
+    
+    .stat-box {
+        padding: 10px;
+    }
+    
+    .stat-number {
+        font-size: 20px;
+    }
+}
+
+/* ========== */
+/* للشاشات الكبيرة جدًا */
+/* ========== */
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1300px;
+    }
+    
+    .card {
+        width: 320px;
+    }
+}
+
+/* شريط تمرير مخصص */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0f1e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00ffff;
+    border-radius: 10px;
+}

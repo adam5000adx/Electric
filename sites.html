@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المواقع - نظام الكهرباء</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <a href="contractor.html">← العودة للوحة</a>
+        </div>
+
+        <div class="form-box" style="max-width: 100%;">
+            <h2>📍 إدارة مواقع العمل</h2>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3>➕ إضافة موقع جديد</h3>
+                <input type="text" id="newSiteName" placeholder="اسم الموقع (مثال: 56, 73, كباين)" style="width: 70%;">
+                <button onclick="addSite()" style="width: 25%;">إضافة</button>
+            </div>
+            
+            <h3>📋 قائمة المواقع الحالية</h3>
+            <div id="sitesList">جاري التحميل...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadSites() {
+            const snapshot = await db.collection('sites').get();
+            
+            if (snapshot.empty) {
+                document.getElementById('sitesList').innerHTML = '<p>لا توجد مواقع بعد</p>';
+                return;
+            }
+
+            let html = '<table><tr><th>اسم الموقع</th><th>عدد العمال فيه</th><th>إجراءات</th></tr>';
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                // حساب عدد العمال في هذا الموقع (من الحضور اليوم)
+                const today = getToday();
+                const attendanceSnapshot = await db.collection('attendance')
+                    .where('siteId', '==', doc.id)
+                    .where('date', '==', today)
+                    .get();
+                
+                html += `<tr>
+                    <td>${data.name}</td>
+                    <td>${attendanceSnapshot.size} عاملاً اليوم</td>
+                    <td><button onclick="deleteSite('${doc.id}')" style="background: red; width: auto;">🗑️ حذف</button></td>
+                </tr>`;
+            }
+            html += '</table>';
+            document.getElementById('sitesList').innerHTML = html;
+        }
+
+        async function addSite() {
+            const name = document.getElementById('newSiteName').value.trim();
+            if (!name) {
+                alert('الرجاء إدخال اسم الموقع');
+                return;
+            }
+
+            try {
+                await db.collection('sites').add({
+                    name: name,
+                    createdAt: new Date().toISOString()
+                });
+                document.getElementById('newSiteName').value = '';
+                loadSites();
+                showMessage('message', '✅ تم إضافة الموقع بنجاح', 'success');
+            } catch (error) {
+                alert('خطأ: ' + error.message);
+            }
+        }
+
+        async function deleteSite(siteId) {
+            if (confirm('هل أنت متأكد من حذف هذا الموقع؟')) {
+                await db.collection('sites').doc(siteId).delete();
+                loadSites();
+            }
+        }
+
+        loadSites();
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة المقاول - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .workers-table {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .workers-table table {
+            width: 100%;
+            min-width: 500px;
+            border-collapse: collapse;
+        }
+        .workers-table th, .workers-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0,255,255,0.2);
+        }
+        .workers-table th {
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+        }
+        .workers-table tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">🔌 لوحة تحكم المقاول</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="#" onclick="logoutContractor()" class="logout-btn">🚪 تسجيل خروج</a>
+        </div>
+
+        <div class="cards" style="margin-bottom: 30px;">
+            <div class="card" style="width: 200px; padding: 20px;">
+                <div class="icon">👷</div>
+                <h3 id="totalWorkers">0</h3>
+                <p>إجمالي العمال</p>
+            </div>
+            <div class="card" style="width: 200px; padding: 20px;">
+                <div class="icon">📍</div>
+                <h3 id="totalSites">0</h3>
+                <p>مواقع العمل</p>
+            </div>
+        </div>
+
+        <div class="form-box" style="max-width: 100%;">
+            <h2>👷 قائمة العمال النشطين</h2>
+            <div class="workers-table" id="workersList">
+                <div style="text-align: center; padding: 20px;">✨ جاري التحميل...</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        // التحقق من تسجيل دخول المقاول
+        if (!localStorage.getItem('contractorLoggedIn')) {
+            window.location.href = 'contractor-login.html';
+        }
+        
+        function logoutContractor() {
+            localStorage.removeItem('contractorLoggedIn');
+            window.location.href = 'contractor-login.html';
+        }
+        
+        async function loadStats() {
+            const workersSnapshot = await db.collection('workers').where('status', '==', 'active').get();
+            document.getElementById('totalWorkers').innerText = workersSnapshot.size;
+            const sitesSnapshot = await db.collection('sites').get();
+            document.getElementById('totalSites').innerText = sitesSnapshot.size;
+        }
+
+        async function loadWorkers() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            if (snapshot.empty) {
+                document.getElementById('workersList').innerHTML = '<div style="text-align: center; padding: 40px;">📭 لا يوجد عمال نشطين</div>';
+                return;
+            }
+            let html = '<table><thead><tr><th>#</th><th>👷 الاسم</th><th>🆔 الرقم القومي</th><th>💰 نوع الأجر</th><th>💵 القيمة</th><th>📌 الحالة</th></tr></thead><tbody>';
+            let index = 1;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                html += `<tr><td>${index++}</td><td><strong>${data.name}</strong></td><td>${data.nationalId}</td><td>${data.salaryType === 'daily' ? 'يومي' : 'ساعي'}</td><td>${data.salaryValue} جنيه</td><td>🟢 نشط</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('workersList').innerHTML = html;
+        }
+
+        loadStats();
+        loadWorkers();
+    </script>
+</body>
+</html>

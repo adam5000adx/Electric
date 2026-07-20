@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول المقاول - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .login-box { max-width: 400px; margin: 80px auto; }
+        .info-box { background: rgba(0, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; color: #00ffff; }
+        .footer { text-align: center; padding: 20px; margin-top: 50px; border-top: 1px solid rgba(0,255,255,0.2); }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-box form-box">
+            <h2 style="text-align:center;">🔐 دخول المقاول</h2>
+            <div id="message"></div>
+            <label>📧 البريد الإلكتروني</label>
+            <input type="email" id="email" placeholder="admin@electrical.com">
+            <label>🔑 كلمة المرور</label>
+            <input type="password" id="password" placeholder="********">
+            <button onclick="loginContractor()">دخول</button>
+            
+            <div class="info-box" id="infoBox">ℹ️ جاري تحميل بيانات الدخول...</div>
+            
+            <p style="text-align:center; margin-top:20px;">
+                <a href="index.html" style="color:#00ffff;">← العودة للرئيسية</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        let CONTRACTOR_EMAIL = "";
+        let CONTRACTOR_PASSWORD = "";
+        
+        async function loadPasswords() {
+            try {
+                const docRef = db.collection('settings').doc('passwords');
+                const doc = await docRef.get();
+                
+                if (doc.exists) {
+                    const data = doc.data();
+                    CONTRACTOR_EMAIL = data.contractorEmail;
+                    CONTRACTOR_PASSWORD = data.contractorPassword;
+                    document.getElementById('infoBox').innerHTML = '✅ تم تحميل بيانات الدخول';
+                    console.log('تم تحميل بيانات المقاول');
+                } else {
+                    document.getElementById('infoBox').innerHTML = '⚠️ لم يتم العثور على بيانات الدخول';
+                }
+            } catch(error) {
+                console.error('خطأ:', error);
+                document.getElementById('infoBox').innerHTML = '❌ خطأ في تحميل البيانات: ' + error.message;
+            }
+        }
+        
+        async function loginContractor() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+            
+            if (!CONTRACTOR_EMAIL) {
+                msg.innerHTML = '<div class="alert-error">⏳ جاري تحميل البيانات، حاول مرة أخرى</div>';
+                await loadPasswords();
+                if (!CONTRACTOR_EMAIL) return;
+            }
+            
+            if (email === CONTRACTOR_EMAIL && password === CONTRACTOR_PASSWORD) {
+                localStorage.setItem('contractorLoggedIn', 'true');
+                msg.innerHTML = '<div class="alert-success">✅ مرحباً بك في لوحة التحكم... جاري التحويل</div>';
+                setTimeout(() => { window.location.href = 'contractor.html'; }, 1000);
+            } else {
+                msg.innerHTML = '<div class="alert-error">❌ البريد الإلكتروني أو كلمة المرور غير صحيحة</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+            }
+        }
+        
+        loadPasswords();
+    </script>
+</body>
+</html>

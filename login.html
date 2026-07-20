@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول العامل</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="form-box" style="max-width: 500px; margin: 50px auto;">
+            <h2 style="text-align: center;">👷 دخول العامل</h2>
+            <div id="message"></div>
+            <input type="text" id="nationalId" placeholder="الرقم القومي">
+            <button onclick="login()">🔓 دخول</button>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="index.html" style="color: #00ffff;">← العودة للرئيسية</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            var nationalId = document.getElementById('nationalId').value.trim();
+            var messageDiv = document.getElementById('message');
+            
+            if (!nationalId) {
+                messageDiv.innerHTML = '<div class="alert alert-error">⚠️ الرجاء إدخال الرقم القومي</div>';
+                return;
+            }
+            
+            try {
+                var snapshot = await db.collection('workers')
+                    .where('nationalId', '==', nationalId)
+                    .where('status', '==', 'active')
+                    .get();
+                
+                if (snapshot.empty) {
+                    messageDiv.innerHTML = '<div class="alert alert-error">❌ الرقم القومي غير مسجل أو العامل غير نشط</div>';
+                    return;
+                }
+                
+                var workerDoc = snapshot.docs[0];
+                var worker = workerDoc.data();
+                
+                localStorage.setItem('workerId', workerDoc.id);
+                localStorage.setItem('workerName', worker.name);
+                localStorage.setItem('workerNationalId', worker.nationalId);
+                
+                messageDiv.innerHTML = '<div class="alert alert-success">✅ تم تسجيل الدخول... جاري التحويل</div>';
+                setTimeout(function() { window.location.href = 'worker.html'; }, 1000);
+                
+            } catch(err) {
+                messageDiv.innerHTML = '<div class="alert alert-error">❌ خطأ: ' + err.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

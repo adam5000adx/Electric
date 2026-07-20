@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعديل بيانات العامل</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">✏️ تعديل بيانات العامل</span>
+            <a href="manage-workers.html">← العودة للعمال</a>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <div class="form-box" style="max-width: 600px; margin: auto;">
+            <h3>✏️ تعديل بيانات العامل</h3>
+            <div id="message"></div>
+            <label>👷 الاسم</label>
+            <input type="text" id="editName">
+            <label>🆔 الرقم القومي</label>
+            <input type="text" id="editNationalId">
+            <label>📞 التليفون</label>
+            <input type="text" id="editPhone">
+            <label>💰 نوع الأجر</label>
+            <select id="editSalaryType">
+                <option value="daily">أجر يومي</option>
+                <option value="hourly">أجر بالساعة</option>
+            </select>
+            <label>💵 قيمة الأجر</label>
+            <input type="number" id="editSalaryValue" step="0.5">
+            <button onclick="saveWorker()">💾 حفظ التعديلات</button>
+        </div>
+        
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        var workerId = localStorage.getItem('editWorkerId');
+        var workerName = localStorage.getItem('editWorkerName');
+        
+        if (!workerId) window.location.href = 'manage-workers.html';
+        
+        async function loadWorker() {
+            var doc = await db.collection('workers').doc(workerId).get();
+            if (doc.exists) {
+                var data = doc.data();
+                document.getElementById('editName').value = data.name || '';
+                document.getElementById('editNationalId').value = data.nationalId || '';
+                document.getElementById('editPhone').value = data.phone || '';
+                document.getElementById('editSalaryType').value = data.salaryType || 'daily';
+                document.getElementById('editSalaryValue').value = data.salaryValue || 0;
+            }
+        }
+        
+        async function saveWorker() {
+            var newName = document.getElementById('editName').value.trim();
+            var newNationalId = document.getElementById('editNationalId').value.trim();
+            var newPhone = document.getElementById('editPhone').value.trim();
+            var newSalaryType = document.getElementById('editSalaryType').value;
+            var newSalaryValue = parseFloat(document.getElementById('editSalaryValue').value);
+            var msg = document.getElementById('message');
+            
+            if (!newName || !newNationalId || !newSalaryValue) {
+                msg.innerHTML = '<div class="alert alert-error">⚠️ املأ جميع الحقول</div>';
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+                return;
+            }
+            
+            try {
+                await db.collection('workers').doc(workerId).update({
+                    name: newName,
+                    nationalId: newNationalId,
+                    phone: newPhone,
+                    salaryType: newSalaryType,
+                    salaryValue: newSalaryValue
+                });
+                msg.innerHTML = '<div class="alert alert-success">✅ تم تحديث البيانات بنجاح</div>';
+                setTimeout(function() { window.location.href = 'manage-workers.html'; }, 1500);
+            } catch(err) {
+                msg.innerHTML = '<div class="alert alert-error">❌ ' + err.message + '</div>';
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+            }
+        }
+        
+        loadWorker();
+    </script>
+</body>
+</html>

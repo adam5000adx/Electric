@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة سلفة / خصم - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-row > * { flex: 1; min-width: 150px; }
+        .info-box {
+            background: rgba(0, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #00ffff;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card-small {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        .stat-number-small { font-size: 22px; font-weight: bold; color: #00ffff; }
+        .stat-label-small { font-size: 11px; color: #888; }
+        .alert-error { background: rgba(255,0,0,0.2); color: #ff6666; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #ff4444; }
+        .alert-success { background: rgba(0,255,0,0.2); color: #00ff00; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #00ff00; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        th { color: #00ffff; }
+        .deduction-row { border-right: 3px solid #ff4444; }
+        .loan-row { border-right: 3px solid #ffa500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">💰 إضافة سلفة / خصم</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats-row">
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="totalLoans">0</div>
+                <div class="stat-label-small">إجمالي السلف</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="totalDeductions">0</div>
+                <div class="stat-label-small">إجمالي الخصومات</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="totalAmount">0</div>
+                <div class="stat-label-small">إجمالي المبالغ</div>
+            </div>
+        </div>
+
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>💰 تسجيل سلفة أو خصم</h3>
+            <div id="message"></div>
+            
+            <div class="form-row">
+                <div><label>👷 العامل</label><select id="workerId"></select></div>
+                <div><label>💰 المبلغ (جنيه)</label><input type="number" id="amount" step="1" placeholder="مثال: 500" value="0"></div>
+            </div>
+            
+            <div class="form-row">
+                <div><label>📝 نوع العملية</label>
+                    <select id="reason">
+                        <option value="سلفة">💸 سلفة نقدية</option>
+                        <option value="مواصلات">🚕 مواصلات</option>
+                        <option value="أدوات">🔧 أدوات كهرباء</option>
+                        <option value="خصم">⚠️ خصم (تأخير/تلف/غرامة)</option>
+                        <option value="علاج">💊 مصاريف علاج</option>
+                        <option value="إيجار">🏠 إيجار سكن</option>
+                        <option value="أخرى">📌 أخرى</option>
+                    </select>
+                </div>
+                <div><label>📅 التاريخ</label><input type="date" id="date" value="2026-06-02"></div>
+            </div>
+            
+            <div class="form-row">
+                <div style="flex:2;"><label>📝 سبب تفصيلي (مهم جداً للخصومات)</label>
+                    <input type="text" id="detailedReason" placeholder="مثال: خصم غياب يوم 2026-06-01 - أو سلفة لشراء أدوات" style="width: 100%;">
+                </div>
+            </div>
+            
+            <div class="info-box" id="infoBox">
+                💡 السلف والخصومات سيتم خصمها من مستحقات العامل النهائية
+            </div>
+            
+            <button onclick="saveTransaction()">💾 حفظ العملية</button>
+        </div>
+
+        <!-- سجل آخر العمليات -->
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>📋 آخر 10 عمليات (سلف وخصومات)</h3>
+            <div id="recentTransactions">✨ جاري التحميل...</div>
+        </div>
+
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        let allTransactions = [];
+
+        // تحميل الإحصائيات
+        async function loadStats() {
+            const snapshot = await db.collection('loans').get();
+            let totalLoans = 0;
+            let totalDeductions = 0;
+            let totalAmount = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                totalAmount += data.amount || 0;
+                if (data.reason === 'خصم') {
+                    totalDeductions += data.amount || 0;
+                } else {
+                    totalLoans += data.amount || 0;
+                }
+            });
+            
+            document.getElementById('totalLoans').innerText = totalLoans.toFixed(2);
+            document.getElementById('totalDeductions').innerText = totalDeductions.toFixed(2);
+            document.getElementById('totalAmount').innerText = totalAmount.toFixed(2);
+        }
+
+        // تحميل آخر العمليات
+        async function loadRecentTransactions() {
+            const snapshot = await db.collection('loans').orderBy('timestamp', 'desc').limit(10).get();
+            allTransactions = [];
+            
+            if (snapshot.empty) {
+                document.getElementById('recentTransactions').innerHTML = '<div class="empty-message">📭 لا توجد عمليات مسجلة</div>';
+                return;
+            }
+            
+            let html = '<div class="table-container"><table style="min-width:500px;">';
+            html += '<thead><tr><th>التاريخ</th><th>العامل</th><th>النوع</th><th>المبلغ</th><th>السبب</th></tr></thead><tbody>';
+            
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                allTransactions.push(data);
+                
+                // جلب اسم العامل
+                let workerName = 'غير معروف';
+                if (data.workerId) {
+                    const workerDoc = await db.collection('workers').doc(data.workerId).get();
+                    if (workerDoc.exists) workerName = workerDoc.data().name;
+                }
+                
+                const rowClass = (data.reason === 'خصم') ? 'deduction-row' : 'loan-row';
+                const typeIcon = (data.reason === 'خصم') ? '⚠️' : '💰';
+                const amountColor = (data.reason === 'خصم') ? '#ff6666' : '#ffa500';
+                
+                html += `<tr class="${rowClass}">
+                    <td>${data.date}</td>
+                    <td>${workerName}</td>
+                    <td>${typeIcon} ${data.reason}</td>
+                    <td style="color:${amountColor}">${data.amount} ج</td>
+                    <td>${data.reasonReason || data.reason}</td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            document.getElementById('recentTransactions').innerHTML = html;
+        }
+
+        async function loadWorkers() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            const select = document.getElementById('workerId');
+            select.innerHTML = '<option value="">-- اختر العامل --</option>';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                select.innerHTML += `<option value="${doc.id}">${data.name} (${data.nationalId})</option>`;
+            });
+        }
+        
+        async function saveTransaction() {
+            const workerId = document.getElementById('workerId').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const reason = document.getElementById('reason').value;
+            const detailedReason = document.getElementById('detailedReason').value.trim();
+            const date = document.getElementById('date').value;
+            const msg = document.getElementById('message');
+            
+            if (!workerId) {
+                msg.innerHTML = '<div class="alert-error">⚠️ اختر العامل</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (!amount || amount <= 0) {
+                msg.innerHTML = '<div class="alert-error">⚠️ أدخل مبلغ صحيح</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            // بناء السبب الكامل
+            const fullReason = detailedReason ? `${reason}: ${detailedReason}` : reason;
+            const typeText = (reason === 'خصم') ? 'خصم' : 'سلفة';
+            
+            try {
+                await db.collection('loans').add({ 
+                    workerId: workerId, 
+                    amount: amount, 
+                    reason: reason,
+                    reasonReason: fullReason,
+                    date: date, 
+                    timestamp: new Date().toISOString() 
+                });
+                
+                msg.innerHTML = `<div class="alert-success">✅ تم تسجيل ${typeText} بمبلغ ${amount} جنيه للعامل</div>`;
+                
+                // تفريغ الحقول
+                document.getElementById('amount').value = '0';
+                document.getElementById('detailedReason').value = '';
+                
+                // تحديث الإحصائيات والقوائم
+                loadStats();
+                loadRecentTransactions();
+                
+                setTimeout(() => msg.innerHTML = '', 3000);
+            } catch(err) {
+                msg.innerHTML = `<div class="alert-error">❌ ${err.message}</div>`;
+                setTimeout(() => msg.innerHTML = '', 3000);
+            }
+        }
+        
+        loadWorkers();
+        loadStats();
+        loadRecentTransactions();
+    </script>
+</body>
+</html>

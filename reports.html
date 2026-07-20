@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: flex-end; }
+        .form-row > div { flex: 1; min-width: 150px; }
+        .filter-box {
+            background: rgba(0, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .report-section {
+            margin-bottom: 30px;
+        }
+        .report-title {
+            color: #00ffff;
+            font-size: 20px;
+            margin-bottom: 15px;
+            padding-right: 10px;
+            border-right: 3px solid #00ffff;
+        }
+        .stats-cards {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            cursor: pointer;
+        }
+        .stat-card:hover { background: rgba(0, 255, 255, 0.2); }
+        .stat-number { font-size: 28px; font-weight: bold; color: #00ffff; }
+        .stat-label { font-size: 12px; color: #888; }
+        .worker-row {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .worker-row:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: scale(1.01);
+        }
+        .total-row {
+            background: rgba(0, 255, 255, 0.15);
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        th { color: #00ffff; background: rgba(0, 255, 255, 0.1); }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0a1a2f 100%);
+            border: 2px solid #00ffff;
+            border-radius: 25px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            background: linear-gradient(90deg, #00ffff, #0066ff);
+            color: #fff;
+            width: auto;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .close-modal { color: #00ffff; float: left; cursor: pointer; font-size: 28px; }
+        @media (max-width: 768px) {
+            th, td { font-size: 12px; padding: 8px; }
+            .stat-number { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">📈 التقارير والإحصائيات</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <!-- ملخص سريع -->
+        <div class="stats-cards">
+            <div class="stat-card" onclick="showModal('📊 إجمالي العمال', document.getElementById('totalWorkers').innerText + ' عامل')">
+                <div class="stat-number" id="totalWorkers">0</div>
+                <div class="stat-label">إجمالي العمال</div>
+            </div>
+            <div class="stat-card" onclick="showModal('📍 إجمالي المواقع', document.getElementById('totalSites').innerText + ' موقع')">
+                <div class="stat-number" id="totalSites">0</div>
+                <div class="stat-label">إجمالي المواقع</div>
+            </div>
+            <div class="stat-card" onclick="showModal('⏱️ إجمالي ساعات العمل', document.getElementById('totalHours').innerText + ' ساعة')">
+                <div class="stat-number" id="totalHours">0</div>
+                <div class="stat-label">إجمالي الساعات</div>
+            </div>
+            <div class="stat-card" onclick="showModal('💰 إجمالي الأجور', document.getElementById('totalSalaries').innerText + ' جنيه')">
+                <div class="stat-number" id="totalSalaries">0</div>
+                <div class="stat-label">إجمالي الأجور</div>
+            </div>
+        </div>
+        <div class="stats-cards">
+            <div class="stat-card" onclick="showModal('🍔 إجمالي خصم الأكل', document.getElementById('totalFood').innerText + ' جنيه')">
+                <div class="stat-number" id="totalFood">0</div>
+                <div class="stat-label">خصم الأكل</div>
+            </div>
+            <div class="stat-card" onclick="showModal('💰 إجمالي السلف', document.getElementById('totalLoans').innerText + ' جنيه')">
+                <div class="stat-number" id="totalLoans">0</div>
+                <div class="stat-label">السلف</div>
+            </div>
+            <div class="stat-card" onclick="showModal('⚠️ إجمالي الخصومات', document.getElementById('totalDeductions').innerText + ' جنيه')">
+                <div class="stat-number" id="totalDeductions">0</div>
+                <div class="stat-label">الخصومات</div>
+            </div>
+            <div class="stat-card" onclick="showModal('✅ صافي المستحقات', document.getElementById('totalNet').innerText + ' جنيه')">
+                <div class="stat-number" id="totalNet">0</div>
+                <div class="stat-label">صافي المستحقات</div>
+            </div>
+        </div>
+
+        <!-- فلتر الفترة -->
+        <div class="filter-box">
+            <h3 style="margin-bottom: 15px;">🔍 فلتر التقرير حسب الفترة</h3>
+            <div class="form-row">
+                <div><label>📅 من تاريخ</label><input type="date" id="startDate" value="2026-01-01"></div>
+                <div><label>📅 إلى تاريخ</label><input type="date" id="endDate" value="2026-12-31"></div>
+                <div><label>📍 فلتر الموقع</label><select id="siteFilter"><option value="">كل المواقع</option></select></div>
+                <div><button onclick="applyFilter()" style="margin-top: 25px;">🔍 تطبيق الفلتر</button></div>
+            </div>
+        </div>
+
+        <!-- تقرير العمال -->
+        <div class="report-section">
+            <h2 class="report-title">📋 تقرير حسابات العمال (اضغط على أي عامل لفتح التفاصيل)</h2>
+            <div id="workersReport">✨ جاري التحميل...</div>
+        </div>
+
+        <!-- تقرير المواقع -->
+        <div class="report-section">
+            <h2 class="report-title">📍 تقرير المواقع</h2>
+            <div id="sitesReport">✨ جاري التحميل...</div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="detailsModal" class="modal" onclick="closeModalOnOutside(event)">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="color:#00ffff; margin-bottom: 20px;">التفاصيل</h3>
+            <div id="modalBody" style="margin: 20px 0; font-size: 18px;"></div>
+            <button onclick="closeModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        let currentReportData = [];
+        let allWorkersData = {};
+
+        function showModal(title, content) {
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('detailsModal').style.display = 'none'; }
+        function closeModalOnOutside(e) { if (e.target === document.getElementById('detailsModal')) closeModal(); }
+
+        function formatNumber(num) { return num.toFixed(2); }
+
+        // جلب بيانات العمال
+        async function loadWorkersData() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            snapshot.forEach(doc => {
+                allWorkersData[doc.id] = doc.data();
+            });
+            return snapshot;
+        }
+
+        // جلب الفلاتر
+        async function loadFilters() {
+            const sitesSnapshot = await db.collection('sites').get();
+            const siteFilter = document.getElementById('siteFilter');
+            sitesSnapshot.forEach(doc => {
+                siteFilter.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+            });
+        }
+
+        // حساب أجر عامل
+        function calculateWorkerSalary(workerId, attendanceRecords) {
+            const worker = allWorkersData[workerId];
+            if (!worker) return 0;
+            const salaryValue = worker.salaryValue || 0;
+            const salaryType = worker.salaryType || 'daily';
+            let totalDays = 0, totalHours = 0;
+            attendanceRecords.forEach(record => {
+                if (record.workerId === workerId) {
+                    if (record.daysCount) totalDays += record.daysCount;
+                    else if (record.attendanceType === 'present') totalDays += 1;
+                    else if (record.attendanceType === 'halfday') totalDays += 0.5;
+                    totalHours += (record.hours || 0) + (record.overtime || 0);
+                }
+            });
+            return (salaryType === 'daily') ? totalDays * salaryValue : totalHours * salaryValue;
+        }
+
+        // تطبيق الفلتر وإنشاء التقارير
+        async function applyFilter() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const siteFilter = document.getElementById('siteFilter').value;
+
+            // جلب البيانات
+            const attendanceSnapshot = await db.collection('attendance').get();
+            const foodSnapshot = await db.collection('food').get();
+            const loansSnapshot = await db.collection('loans').get();
+
+            // فلترة الحضور حسب التاريخ والموقع
+            let filteredAttendance = [];
+            attendanceSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.date >= startDate && data.date <= endDate) {
+                    if (!siteFilter || data.siteId === siteFilter) {
+                        filteredAttendance.push(data);
+                    }
+                }
+            });
+
+            // فلترة الأكل
+            let filteredFood = [];
+            foodSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.date >= startDate && data.date <= endDate) {
+                    if (!siteFilter || data.siteId === siteFilter) {
+                        filteredFood.push(data);
+                    }
+                }
+            });
+
+            // فلترة السلف
+            let filteredLoans = [];
+            loansSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.date >= startDate && data.date <= endDate) {
+                    filteredLoans.push(data);
+                }
+            });
+
+            // حساب إجماليات عامة
+            let totalHours = 0, totalSalaries = 0, totalFood = 0, totalLoans = 0, totalDeductions = 0;
+            filteredAttendance.forEach(a => { totalHours += (a.hours || 0) + (a.overtime || 0); });
+            filteredFood.forEach(f => { totalFood += f.totalPrice || 0; });
+            filteredLoans.forEach(l => { 
+                if (l.reason === 'خصم') totalDeductions += l.amount || 0;
+                else totalLoans += l.amount || 0;
+            });
+
+            // تجميع بيانات العمال
+            const workersSet = new Set();
+            filteredAttendance.forEach(a => workersSet.add(a.workerId));
+            const workersReport = [];
+            for (const workerId of workersSet) {
+                const worker = allWorkersData[workerId];
+                if (!worker) continue;
+                const salary = calculateWorkerSalary(workerId, filteredAttendance);
+                let workerFood = 0;
+                filteredFood.forEach(food => {
+                    if (food.workers && food.workers[workerId]) {
+                        const count = Object.keys(food.workers).length;
+                        workerFood += (food.totalPrice / count);
+                    }
+                });
+                let workerLoans = 0, workerDeductions = 0;
+                filteredLoans.forEach(loan => {
+                    if (loan.workerId === workerId) {
+                        if (loan.reason === 'خصم') workerDeductions += loan.amount;
+                        else workerLoans += loan.amount;
+                    }
+                });
+                const net = salary - workerFood - workerLoans - workerDeductions;
+                workersReport.push({
+                    id: workerId, name: worker.name, nationalId: worker.nationalId,
+                    salary: salary, food: workerFood, loans: workerLoans,
+                    deductions: workerDeductions, net: net
+                });
+                totalSalaries += salary;
+            }
+            workersReport.sort((a, b) => b.net - a.net);
+
+            // تقرير المواقع
+            const sitesSet = new Set();
+            filteredAttendance.forEach(a => { if (a.siteId && a.siteId !== 'none') sitesSet.add(a.siteId); });
+            const sitesReport = [];
+            for (const siteId of sitesSet) {
+                const siteDoc = await db.collection('sites').doc(siteId).get();
+                const siteName = siteDoc.exists ? siteDoc.data().name : siteId;
+                let siteHours = 0, siteCost = 0, siteFood = 0;
+                const siteAttendance = filteredAttendance.filter(a => a.siteId === siteId);
+                siteAttendance.forEach(a => { siteHours += (a.hours || 0) + (a.overtime || 0); });
+                const siteWorkers = new Set(siteAttendance.map(a => a.workerId));
+                for (const wid of siteWorkers) {
+                    siteCost += calculateWorkerSalary(wid, siteAttendance);
+                }
+                filteredFood.forEach(food => {
+                    if (food.siteId === siteId) siteFood += food.totalPrice || 0;
+                });
+                sitesReport.push({ name: siteName, hours: siteHours, cost: siteCost, food: siteFood, net: siteCost - siteFood });
+            }
+            sitesReport.sort((a, b) => b.net - a.net);
+
+            // تحديث الإحصائيات
+            document.getElementById('totalWorkers').innerText = workersSet.size;
+            document.getElementById('totalSites').innerText = sitesSet.size;
+            document.getElementById('totalHours').innerText = totalHours;
+            document.getElementById('totalSalaries').innerText = totalSalaries.toFixed(2);
+            document.getElementById('totalFood').innerText = totalFood.toFixed(2);
+            document.getElementById('totalLoans').innerText = totalLoans.toFixed(2);
+            document.getElementById('totalDeductions').innerText = totalDeductions.toFixed(2);
+            document.getElementById('totalNet').innerText = (totalSalaries - totalFood - totalLoans - totalDeductions).toFixed(2);
+
+            // عرض تقرير العمال
+            if (workersReport.length === 0) {
+                document.getElementById('workersReport').innerHTML = '<div class="empty-message">📭 لا توجد بيانات في هذه الفترة</div>';
+            } else {
+                let html = '<div class="table-container"><table style="min-width:800px;"><thead><th>#</th><th>👷 العامل</th><th>🆔 الرقم القومي</th><th>⏱️ الأجر</th><th>🍔 الأكل</th><th>💰 السلف</th><th>⚠️ الخصم</th><th>✅ الصافي</th></thead><tbody>';
+                workersReport.forEach((w, idx) => {
+                    html += `<tr class="worker-row" onclick="viewWorkerAccount('${w.id}', '${w.name.replace(/'/g, "\\'")}')">
+                        <td>${idx+1}</td><td>${w.name}</td><td>${w.nationalId}</td>
+                        <td>${formatNumber(w.salary)}</td><td style="color:#ff6666">-${formatNumber(w.food)}</td>
+                        <td style="color:#ffa500">-${formatNumber(w.loans)}</td><td style="color:#ff6666">-${formatNumber(w.deductions)}</td>
+                        <td style="color:#00ff00">${formatNumber(w.net)}</td>
+                    </tr>`;
+                });
+                html += `<tr class="total-row"><td colspan="3"><strong>الإجمالي</strong></td>
+                    <td><strong>${formatNumber(totalSalaries)}</strong></td>
+                    <td><strong>${formatNumber(totalFood)}</strong></td>
+                    <td><strong>${formatNumber(totalLoans)}</strong></td>
+                    <td><strong>${formatNumber(totalDeductions)}</strong></td>
+                    <td><strong>${formatNumber(totalSalaries - totalFood - totalLoans - totalDeductions)}</strong></td>
+                </tr>`;
+                html += '</tbody></table></div>';
+                document.getElementById('workersReport').innerHTML = html;
+            }
+
+            // عرض تقرير المواقع
+            if (sitesReport.length === 0) {
+                document.getElementById('sitesReport').innerHTML = '<div class="empty-message">📭 لا توجد بيانات للمواقع</div>';
+            } else {
+                let html = '<div class="table-container"><table style="min-width:600px;"><thead><th>#</th><th>📍 الموقع</th><th>⏱️ ساعات</th><th>💰 الأجور</th><th>🍔 الأكل</th><th>✅ الصافي</th></thead><tbody>';
+                sitesReport.forEach((s, idx) => {
+                    html += `<tr><td>${idx+1}</td><td>${s.name}</td><td>${s.hours}</td><td>${formatNumber(s.cost)}</td><td style="color:#ff6666">-${formatNumber(s.food)}</td><td style="color:#00ff00">${formatNumber(s.net)}</td></tr>`;
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('sitesReport').innerHTML = html;
+            }
+        }
+
+        function viewWorkerAccount(workerId, workerName) {
+            localStorage.setItem('viewWorkerId', workerId);
+            localStorage.setItem('viewWorkerName', workerName);
+            window.location.href = 'worker-details.html';
+        }
+
+        async function init() {
+            await loadWorkersData();
+            await loadFilters();
+            await applyFilter();
+        }
+        init();
+    </script>
+</body>
+</html>

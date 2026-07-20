@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة العمال</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .worker-card {
+            background: rgba(15, 25, 45, 0.7);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .worker-card:hover {
+            transform: translateX(5px);
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        .edit-mode {
+            background: rgba(0, 100, 200, 0.3);
+        }
+        .edit-mode:hover {
+            transform: none;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0a1a2f 100%);
+            border: 2px solid #00ffff;
+            border-radius: 25px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            background: linear-gradient(90deg, #00ffff, #0066ff);
+            color: #fff;
+            width: auto;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .close-modal { color: #00ffff; float: left; cursor: pointer; font-size: 28px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">👷 إدارة العمال</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <div class="form-box">
+            <h3>➕ إضافة عامل جديد</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="name" placeholder="الاسم" style="flex:2;">
+                <input type="text" id="nationalId" placeholder="الرقم القومي" style="flex:2;">
+                <input type="text" id="phone" placeholder="التليفون" style="flex:2;">
+                <select id="salaryType" style="flex:1;">
+                    <option value="daily">أجر يومي</option>
+                    <option value="hourly">أجر بالساعة</option>
+                </select>
+                <input type="number" id="salaryValue" placeholder="قيمة الأجر" style="flex:1;">
+                <button onclick="addWorker()" style="flex:1;">➕ إضافة</button>
+            </div>
+            <div id="addMessage"></div>
+        </div>
+
+        <div class="form-box">
+            <h3>📋 قائمة العمال (اضغط على العامل لتعديل بياناته أو عرض حسابه)</h3>
+            <div id="workersList">جاري التحميل...</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <!-- Modal for details -->
+    <div id="detailsModal" class="modal" onclick="closeModalOnOutside(event)" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="color:#00ffff; margin-bottom: 20px;">التفاصيل</h3>
+            <div id="modalBody" style="margin: 20px 0; font-size: 16px; line-height: 1.8; text-align: right;"></div>
+            <button onclick="closeModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        var editingWorkerId = null;
+        
+        function showModal(title, content) {
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+        
+        function closeModalOnOutside(e) {
+            if (e.target === document.getElementById('detailsModal')) closeModal();
+        }
+        
+        async function loadWorkers() {
+            var snapshot = await db.collection('workers').orderBy('name').get();
+            if (snapshot.empty) {
+                document.getElementById('workersList').innerHTML = '<div style="text-align:center; padding:40px;">📭 لا يوجد عمال</div>';
+                return;
+            }
+            var html = '';
+            snapshot.forEach(function(doc) {
+                var d = doc.data();
+                html += `<div class="worker-card" onclick="showWorkerOptions('${doc.id}', '${d.name.replace(/'/g, "\\'")}')">
+                            <strong>👷 ${d.name}</strong><br>
+                            🆔 ${d.nationalId}<br>
+                            📞 ${d.phone || '-'}<br>
+                            💰 ${d.salaryType === 'daily' ? 'يومي' : 'ساعي'}: ${d.salaryValue} جنيه
+                            <span style="color: #00ffff; font-size: 12px; display: block; margin-top: 8px;">🖱️ اضغط لعرض الحساب أو التعديل</span>
+                         </div>`;
+            });
+            document.getElementById('workersList').innerHTML = html;
+        }
+        
+        function showWorkerOptions(workerId, workerName) {
+            var content = `
+                <div style="text-align:center;">
+                    <button onclick="viewWorkerAccount('${workerId}', '${workerName}')" style="margin:10px; width:80%;">📊 عرض كشف الحساب</button>
+                    <button onclick="editWorker('${workerId}', '${workerName}')" style="margin:10px; width:80%;">✏️ تعديل بيانات العامل</button>
+                    <button onclick="archiveWorker('${workerId}', '${workerName}')" style="margin:10px; width:80%; background:#dc3545;">📦 تصفية الحساب</button>
+                </div>
+            `;
+            showModal('👷 ' + workerName, content);
+        }
+        
+        function viewWorkerAccount(workerId, workerName) {
+            localStorage.setItem('viewWorkerId', workerId);
+            localStorage.setItem('viewWorkerName', workerName);
+            window.location.href = 'worker-details.html';
+            closeModal();
+        }
+        
+        function editWorker(workerId, workerName) {
+            // حفظ بيانات العامل للتعديل
+            localStorage.setItem('editWorkerId', workerId);
+            localStorage.setItem('editWorkerName', workerName);
+            window.location.href = 'edit-worker.html';
+            closeModal();
+        }
+        
+        async function archiveWorker(workerId, workerName) {
+            if (confirm(`⚠️ هل تريد تصفية حساب "${workerName}"؟\nبعد التصفية لن يظهر في الحضور الجديد.`)) {
+                await db.collection('workers').doc(workerId).update({ status: 'archived' });
+                loadWorkers();
+                closeModal();
+            }
+        }
+        
+        async function addWorker() {
+            var name = document.getElementById('name').value.trim();
+            var nationalId = document.getElementById('nationalId').value.trim();
+            var phone = document.getElementById('phone').value.trim();
+            var salaryType = document.getElementById('salaryType').value;
+            var salaryValue = parseFloat(document.getElementById('salaryValue').value);
+            var msg = document.getElementById('addMessage');
+            
+            if (!name || !nationalId || !salaryValue) {
+                msg.innerHTML = '<div class="alert alert-error">⚠️ املأ جميع الحقول الأساسية</div>';
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+                return;
+            }
+            
+            var existing = await db.collection('workers').where('nationalId', '==', nationalId).get();
+            if (!existing.empty) {
+                msg.innerHTML = '<div class="alert alert-error">❌ هذا الرقم القومي موجود بالفعل</div>';
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+                return;
+            }
+            
+            try {
+                await db.collection('workers').add({
+                    name: name,
+                    nationalId: nationalId,
+                    phone: phone,
+                    salaryType: salaryType,
+                    salaryValue: salaryValue,
+                    status: 'active',
+                    createdAt: new Date().toISOString()
+                });
+                
+                msg.innerHTML = '<div class="alert alert-success">✅ تم إضافة العامل بنجاح</div>';
+                document.getElementById('name').value = '';
+                document.getElementById('nationalId').value = '';
+                document.getElementById('phone').value = '';
+                document.getElementById('salaryValue').value = '';
+                loadWorkers();
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+            } catch(err) {
+                msg.innerHTML = '<div class="alert alert-error">❌ ' + err.message + '</div>';
+                setTimeout(function() { msg.innerHTML = ''; }, 3000);
+            }
+        }
+        
+        loadWorkers();
+    </script>
+</body>
+</html>

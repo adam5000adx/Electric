@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول المطور - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .login-box { max-width: 400px; margin: 80px auto; }
+        .dev-badge { text-align: center; margin-bottom: 20px; }
+        .dev-badge span { background: linear-gradient(90deg, #ff00ff, #00ffff); padding: 5px 15px; border-radius: 20px; font-size: 14px; }
+        .info-box { background: rgba(0, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; color: #00ffff; }
+        .footer { text-align: center; padding: 20px; margin-top: 50px; border-top: 1px solid rgba(0,255,255,0.2); }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-box form-box">
+            <div class="dev-badge"><span>⚡ DEVELOPER ACCESS ⚡</span></div>
+            <h2 style="text-align:center;">🔐 دخول المطور</h2>
+            <div id="message"></div>
+            <label>📧 البريد الإلكتروني</label>
+            <input type="email" id="email" placeholder="dev@adamahmed.com">
+            <label>🔑 كلمة المرور</label>
+            <input type="password" id="password" placeholder="********">
+            <button onclick="loginDev()">دخول</button>
+            
+            <div class="info-box" id="infoBox">ℹ️ جاري تحميل بيانات الدخول...</div>
+            
+            <p style="text-align:center; margin-top:20px;">
+                <a href="index.html" style="color:#00ffff;">← العودة للرئيسية</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        let DEV_EMAIL = "";
+        let DEV_PASSWORD = "";
+        
+        async function loadPasswords() {
+            try {
+                const docRef = db.collection('settings').doc('passwords');
+                const doc = await docRef.get();
+                
+                if (doc.exists) {
+                    const data = doc.data();
+                    DEV_EMAIL = data.devEmail;
+                    DEV_PASSWORD = data.devPassword;
+                    document.getElementById('infoBox').innerHTML = '✅ تم تحميل بيانات الدخول';
+                    console.log('تم تحميل بيانات المطور');
+                } else {
+                    document.getElementById('infoBox').innerHTML = '⚠️ لم يتم العثور على بيانات الدخول';
+                }
+            } catch(error) {
+                console.error('خطأ:', error);
+                document.getElementById('infoBox').innerHTML = '❌ خطأ في تحميل البيانات: ' + error.message;
+            }
+        }
+        
+        async function loginDev() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+            
+            if (!DEV_EMAIL) {
+                msg.innerHTML = '<div class="alert-error">⏳ جاري تحميل البيانات، حاول مرة أخرى</div>';
+                await loadPasswords();
+                if (!DEV_EMAIL) return;
+            }
+            
+            if (email === DEV_EMAIL && password === DEV_PASSWORD) {
+                localStorage.setItem('devLoggedIn', 'true');
+                msg.innerHTML = '<div class="alert-success">✅ مرحباً بك في لوحة المطور... جاري التحويل</div>';
+                setTimeout(() => { window.location.href = 'dev-panel.html'; }, 1000);
+            } else {
+                msg.innerHTML = '<div class="alert-error">❌ البريد الإلكتروني أو كلمة المرور غير صحيحة</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+            }
+        }
+        
+        loadPasswords();
+    </script>
+</body>
+</html>

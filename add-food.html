@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة وجبة - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-row > * { flex: 1; min-width: 150px; }
+        .workers-checkbox-group {
+            background: rgba(0, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .worker-checkbox {
+            display: inline-block;
+            margin: 5px 15px;
+            padding: 5px 10px;
+            background: rgba(15, 25, 45, 0.7);
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .worker-checkbox:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        .info-box {
+            background: rgba(0, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #00ffff;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card-small {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        .stat-number-small { font-size: 22px; font-weight: bold; color: #00ffff; }
+        .stat-label-small { font-size: 11px; color: #888; }
+        .alert-error { background: rgba(255,0,0,0.2); color: #ff6666; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #ff4444; }
+        .alert-success { background: rgba(0,255,0,0.2); color: #00ff00; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #00ff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">🍔 إضافة وجبة أكل</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <!-- إحصائيات اليوم -->
+        <div class="stats-row">
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="totalMeals">0</div>
+                <div class="stat-label-small">إجمالي الوجبات</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="totalFoodCost">0</div>
+                <div class="stat-label-small">إجمالي تكلفة الأكل</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="avgPerMeal">0</div>
+                <div class="stat-label-small">متوسط تكلفة الوجبة</div>
+            </div>
+        </div>
+
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>🍔 تسجيل وجبة أكل</h3>
+            <div id="message"></div>
+            
+            <div class="form-row">
+                <div><label>📅 التاريخ</label><input type="date" id="date" value="2026-06-02"></div>
+                <div><label>📍 موقع العمل</label><select id="siteId"></select></div>
+            </div>
+            
+            <div class="form-row">
+                <div><label>🍽️ نوع الوجبة</label>
+                    <select id="mealType">
+                        <option value="غداء">🍲 غداء</option>
+                        <option value="عشاء">🍛 عشاء</option>
+                        <option value="سحور">🍽️ سحور</option>
+                        <option value="إفطار">🍳 إفطار</option>
+                        <option value="وجبة خفيفة">🥪 وجبة خفيفة</option>
+                    </select>
+                </div>
+                <div><label>💰 التكلفة الإجمالية (جنيه)</label>
+                    <input type="number" id="totalPrice" step="0.5" placeholder="مثال: 300" value="0">
+                </div>
+            </div>
+            
+            <label>👷 اختر العمال الذين أكلوا (اختر من القائمة)</label>
+            <div class="workers-checkbox-group" id="workersCheckboxes">
+                ✨ جاري تحميل العمال...
+            </div>
+            
+            <div class="info-box" id="infoBox">
+                💡 عند اختيار العمال، سيتم تقسيم التكلفة عليهم بالتساوي
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <label>📝 ملاحظات إضافية (اختياري)</label>
+                <input type="text" id="notes" placeholder="مثال: تم إضافة أرز باللبن، أو وجبة خاصة..." style="width: 100%;">
+            </div>
+            
+            <button onclick="saveFood()">💾 حفظ الوجبة</button>
+        </div>
+
+        <!-- سجل وجبات اليوم -->
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>📋 سجل وجبات اليوم</h3>
+            <div id="todayFoodList">✨ جاري التحميل...</div>
+        </div>
+
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        let allWorkers = [];
+        let selectedWorkers = new Set();
+        let allFoodRecords = [];
+
+        // تحميل إحصائيات الأكل
+        async function loadFoodStats() {
+            const snapshot = await db.collection('food').get();
+            allFoodRecords = [];
+            let totalCost = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                allFoodRecords.push(data);
+                totalCost += data.totalPrice || 0;
+            });
+            
+            const totalMeals = allFoodRecords.length;
+            const avgPerMeal = totalMeals > 0 ? (totalCost / totalMeals).toFixed(2) : 0;
+            
+            document.getElementById('totalMeals').innerText = totalMeals;
+            document.getElementById('totalFoodCost').innerText = totalCost.toFixed(2);
+            document.getElementById('avgPerMeal').innerText = avgPerMeal;
+        }
+
+        // تحميل سجل وجبات اليوم
+        async function loadTodayFoodList() {
+            const today = document.getElementById('date').value;
+            const snapshot = await db.collection('food').where('date', '==', today).get();
+            
+            if (snapshot.empty) {
+                document.getElementById('todayFoodList').innerHTML = '<div class="empty-message">📭 لا توجد وجبات مسجلة اليوم</div>';
+                return;
+            }
+            
+            let html = '<div style="overflow-x:auto;"><table style="width:100%;">';
+            html += '<thead><tr><th>نوع الوجبة</th><th>الموقع</th><th>التكلفة</th><th>عدد العمال</th><th>حصة العامل</th><th>ملاحظات</th></tr></thead><tbody>';
+            
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                const workerCount = data.workerCount || (data.workers ? Object.keys(data.workers).length : 0);
+                const sharePerWorker = workerCount > 0 ? (data.totalPrice / workerCount).toFixed(2) : 0;
+                
+                html += `<tr>
+                    <td>${data.mealType || 'وجبة'}</td>
+                    <td>${data.siteName || data.siteId || '-'}</td>
+                    <td>${data.totalPrice} ج</td>
+                    <td>${workerCount} عامل</td>
+                    <td>${sharePerWorker} ج</td>
+                    <td>${data.notes || '-'}</td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            document.getElementById('todayFoodList').innerHTML = html;
+        }
+
+        // تحميل العمال
+        async function loadWorkers() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            const container = document.getElementById('workersCheckboxes');
+            container.innerHTML = '';
+            allWorkers = [];
+            
+            if (snapshot.empty) {
+                container.innerHTML = '<p>📭 لا يوجد عمال نشطين</p>';
+                return;
+            }
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                allWorkers.push({ id: doc.id, name: data.name });
+                container.innerHTML += `
+                    <label class="worker-checkbox">
+                        <input type="checkbox" value="${doc.id}" onchange="toggleWorker('${doc.id}', this.checked)"> ${data.name}
+                    </label>
+                `;
+            });
+        }
+        
+        // تحميل المواقع
+        async function loadSites() {
+            const snapshot = await db.collection('sites').get();
+            const select = document.getElementById('siteId');
+            select.innerHTML = '<option value="">-- اختر الموقع --</option>';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                select.innerHTML += `<option value="${doc.id}">${data.name}</option>`;
+            });
+        }
+        
+        function toggleWorker(workerId, isChecked) {
+            if (isChecked) {
+                selectedWorkers.add(workerId);
+            } else {
+                selectedWorkers.delete(workerId);
+            }
+            updateInfoBox();
+        }
+        
+        function updateInfoBox() {
+            const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
+            const workerCount = selectedWorkers.size;
+            const infoBox = document.getElementById('infoBox');
+            
+            if (workerCount === 0) {
+                infoBox.innerHTML = '⚠️ لم يتم اختيار أي عامل - لن يتم تسجيل أي خصم أكل';
+                infoBox.style.color = '#ff6666';
+            } else if (totalPrice > 0) {
+                const share = (totalPrice / workerCount).toFixed(2);
+                infoBox.innerHTML = `💰 التكلفة الإجمالية: ${totalPrice} جنيه | 👥 عدد العمال: ${workerCount} | 🍔 حصة كل عامل: ${share} جنيه`;
+                infoBox.style.color = '#00ffff';
+            } else {
+                infoBox.innerHTML = '📝 أدخل التكلفة الإجمالية واختر العمال';
+                infoBox.style.color = '#00ffff';
+            }
+        }
+        
+        document.getElementById('totalPrice').addEventListener('input', updateInfoBox);
+        
+        async function saveFood() {
+            const date = document.getElementById('date').value;
+            const siteId = document.getElementById('siteId').value;
+            const mealType = document.getElementById('mealType').value;
+            const totalPrice = parseFloat(document.getElementById('totalPrice').value);
+            const notes = document.getElementById('notes').value.trim();
+            const msg = document.getElementById('message');
+            
+            if (!siteId) {
+                msg.innerHTML = '<div class="alert-error">⚠️ اختر موقع العمل</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (!totalPrice || totalPrice <= 0) {
+                msg.innerHTML = '<div class="alert-error">⚠️ أدخل التكلفة الإجمالية للوجبة</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (selectedWorkers.size === 0) {
+                msg.innerHTML = '<div class="alert-error">⚠️ اختر العمال الذين أكلوا الوجبة</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            // إنشاء كائن العمال الذين أكلوا
+            const workersObj = {};
+            selectedWorkers.forEach(workerId => {
+                workersObj[workerId] = true;
+            });
+            
+            const workerCount = selectedWorkers.size;
+            const sharePerWorker = totalPrice / workerCount;
+            
+            try {
+                const siteDoc = await db.collection('sites').doc(siteId).get();
+                const siteName = siteDoc.exists ? siteDoc.data().name : siteId;
+                
+                await db.collection('food').add({
+                    date: date,
+                    siteId: siteId,
+                    siteName: siteName,
+                    mealType: mealType,
+                    totalPrice: totalPrice,
+                    workers: workersObj,
+                    workerCount: workerCount,
+                    sharePerWorker: sharePerWorker,
+                    notes: notes,
+                    timestamp: new Date().toISOString()
+                });
+                
+                msg.innerHTML = `<div class="alert-success">✅ تم تسجيل الوجبة - ${workerCount} عامل - حصة كل عامل ${sharePerWorker.toFixed(2)} جنيه</div>`;
+                
+                // تفريغ الحقول
+                document.getElementById('totalPrice').value = '0';
+                document.getElementById('notes').value = '';
+                document.querySelectorAll('#workersCheckboxes input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+                selectedWorkers.clear();
+                updateInfoBox();
+                
+                // تحديث الإحصائيات والقوائم
+                loadFoodStats();
+                loadTodayFoodList();
+                
+                setTimeout(() => msg.innerHTML = '', 3000);
+            } catch(err) {
+                msg.innerHTML = `<div class="alert-error">❌ ${err.message}</div>`;
+                setTimeout(() => msg.innerHTML = '', 3000);
+            }
+        }
+        
+        document.getElementById('date').addEventListener('change', function() {
+            loadTodayFoodList();
+        });
+        
+        loadWorkers();
+        loadSites();
+        loadFoodStats();
+        loadTodayFoodList();
+    </script>
+</body>
+</html>

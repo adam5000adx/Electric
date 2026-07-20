@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل حضور - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-row > * { flex: 1; min-width: 150px; }
+        .reason-group { background: rgba(0, 255, 255, 0.1); padding: 15px; border-radius: 12px; margin-top: 10px; }
+        .reason-group label { display: inline-block; margin-left: 20px; cursor: pointer; margin-bottom: 8px; }
+        .info-box { background: rgba(0, 255, 255, 0.05); padding: 12px; border-radius: 10px; margin-top: 10px; font-size: 14px; color: #00ffff; }
+        .required { color: #ff4444; }
+        .optional { color: #888; }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card-small {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        .stat-number-small { font-size: 22px; font-weight: bold; color: #00ffff; }
+        .stat-label-small { font-size: 11px; color: #888; }
+        .alert-error { background: rgba(255,0,0,0.2); color: #ff6666; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #ff4444; }
+        .alert-success { background: rgba(0,255,0,0.2); color: #00ff00; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #00ff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">✅ تسجيل الحضور</span>
+            <a href="contractor.html">📊 الرئيسية</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="manage-sites.html">📍 المواقع</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <!-- إحصائيات اليوم -->
+        <div class="stats-row" id="todayStats">
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="todayWorkers">0</div>
+                <div class="stat-label-small">عمال حضروا اليوم</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="todayHours">0</div>
+                <div class="stat-label-small">إجمالي ساعات اليوم</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-number-small" id="todayOvertime">0</div>
+                <div class="stat-label-small">ساعات سهر اليوم</div>
+            </div>
+        </div>
+
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>✅ تسجيل الحضور وساعات العمل</h3>
+            <div id="message"></div>
+            
+            <div class="form-row">
+                <div><label>📅 التاريخ</label><input type="date" id="date" value="2026-06-02"></div>
+                <div><label>👷 العامل</label><select id="workerId"></select></div>
+                <div><label>📍 الموقع <span id="siteRequired" class="required">(ضروري)</span></label><select id="siteId"></select></div>
+            </div>
+            
+            <div class="form-row">
+                <div><label>⏱️ الساعات العادية</label><input type="number" id="hours" step="0.5" placeholder="مثال: 8" value="0"></div>
+                <div><label>🌙 ساعات السهر (إضافي)</label><input type="number" id="overtime" step="0.5" placeholder="مثال: 2" value="0"></div>
+                <div><label>💰 قيمة الساعة (للساعي)</label><input type="number" id="hourlyRate" step="0.5" placeholder="تعبأ تلقائياً" disabled></div>
+            </div>
+            
+            <div class="reason-group">
+                <label>📌 نوع اليوم:</label>
+                <label><input type="radio" name="attendanceType" value="present" onchange="updateFormByType()" checked> ✅ حاضر</label>
+                <label><input type="radio" name="attendanceType" value="halfday" onchange="updateFormByType()"> 🌓 نصف يوم</label>
+                <label><input type="radio" name="attendanceType" value="absent" onchange="updateFormByType()"> ❌ غائب</label>
+                <label><input type="radio" name="attendanceType" value="sick" onchange="updateFormByType()"> 🤒 مرض</label>
+                <label><input type="radio" name="attendanceType" value="vacation" onchange="updateFormByType()"> 🏖️ إجازة</label>
+                <label><input type="radio" name="attendanceType" value="rest" onchange="updateFormByType()"> 😴 راحة</label>
+            </div>
+            
+            <div class="info-box" id="infoBox">
+                ✅ حاضر: يتم حساب الأجر كاملاً حسب الساعات
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <label>📝 سبب إضافي (اختياري)</label>
+                <input type="text" id="customReason" placeholder="مثال: حضر متأخر، عذر عائلي، غياب بدون عذر..." style="width: 100%;">
+            </div>
+            
+            <button onclick="saveAttendance()">💾 حفظ الحضور</button>
+        </div>
+
+        <!-- سجل حضور اليوم -->
+        <div class="form-box" style="max-width: 700px; margin: auto;">
+            <h3>📋 سجل حضور اليوم</h3>
+            <div id="todayAttendanceList">✨ جاري التحميل...</div>
+        </div>
+
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <script>
+        let currentWorkers = {};
+        let existingAttendance = []; // لتخزين الحضور المسجل مسبقاً
+
+        // تحديث إحصائيات اليوم وسجل الحضور
+        async function loadTodayStats() {
+            const today = document.getElementById('date').value;
+            const snapshot = await db.collection('attendance').get();
+            
+            // تجميع بيانات اليوم فقط
+            existingAttendance = [];
+            let totalWorkers = new Set();
+            let totalHours = 0;
+            let totalOvertime = 0;
+            let todayData = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.date === today) {
+                    existingAttendance.push(data);
+                    totalWorkers.add(data.workerId);
+                    totalHours += data.hours || 0;
+                    totalOvertime += data.overtime || 0;
+                    todayData.push(data);
+                }
+            });
+            
+            document.getElementById('todayWorkers').innerText = totalWorkers.size;
+            document.getElementById('todayHours').innerText = totalHours;
+            document.getElementById('todayOvertime').innerText = totalOvertime;
+            
+            if (todayData.length === 0) {
+                document.getElementById('todayAttendanceList').innerHTML = '<div class="empty-message">📭 لا يوجد حضور مسجل اليوم</div>';
+                return;
+            }
+            
+            let html = '<div style="overflow-x:auto;"><table style="width:100%;">';
+            html += '<thead><tr><th>العامل</th><th>الموقع</th><th>ساعات</th><th>سهر</th><th>الحالة</th><th>السبب</th></tr></thead><tbody>';
+            
+            for (const data of todayData) {
+                const workerDoc = await db.collection('workers').doc(data.workerId).get();
+                const workerName = workerDoc.exists ? workerDoc.data().name : 'غير معروف';
+                const statusText = data.attendanceStatus || (data.attendanceType === 'present' ? 'حاضر' : (data.attendanceType === 'absent' ? 'غائب' : 'نصف يوم'));
+                html += `<tr>
+                    <td>${workerName}</td>
+                    <td>${data.siteName || data.siteId}</td>
+                    <td>${data.hours || 0}</td>
+                    <td>${data.overtime || 0}</td>
+                    <td>${statusText}</td>
+                    <td>${data.customReason || '-'}</td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            document.getElementById('todayAttendanceList').innerHTML = html;
+        }
+
+        async function loadWorkers() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            const select = document.getElementById('workerId');
+            select.innerHTML = '<option value="">-- اختر العامل --</option>';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                currentWorkers[doc.id] = data;
+                select.innerHTML += `<option value="${doc.id}">${data.name} (${data.nationalId}) - ${data.salaryType === 'daily' ? 'يومي' : 'ساعي'}: ${data.salaryValue} ج</option>`;
+            });
+        }
+        
+        async function loadSites() {
+            const snapshot = await db.collection('sites').get();
+            const select = document.getElementById('siteId');
+            select.innerHTML = '<option value="">-- اختر الموقع --</option>';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                select.innerHTML += `<option value="${doc.id}">${data.name}</option>`;
+            });
+        }
+        
+        document.getElementById('workerId').addEventListener('change', function() {
+            const workerId = this.value;
+            if (workerId && currentWorkers[workerId] && currentWorkers[workerId].salaryType === 'hourly') {
+                document.getElementById('hourlyRate').value = currentWorkers[workerId].salaryValue;
+                document.getElementById('hourlyRate').disabled = false;
+            } else {
+                document.getElementById('hourlyRate').value = '';
+                document.getElementById('hourlyRate').disabled = true;
+            }
+        });
+        
+        function updateFormByType() {
+            var type = document.querySelector('input[name="attendanceType"]:checked').value;
+            var infoBox = document.getElementById('infoBox');
+            var hoursField = document.getElementById('hours');
+            var overtimeField = document.getElementById('overtime');
+            var siteRequired = document.getElementById('siteRequired');
+            
+            if (type === 'present') {
+                infoBox.innerHTML = '✅ حاضر: يتم حساب الأجر كاملاً حسب الساعات المدخلة';
+                hoursField.disabled = false;
+                overtimeField.disabled = false;
+                siteRequired.innerHTML = '(ضروري)';
+                siteRequired.className = 'required';
+            } else if (type === 'halfday') {
+                infoBox.innerHTML = '🌓 نصف يوم: يتم حساب نصف أجر اليوم فقط (0.5 يوم)';
+                hoursField.disabled = false;
+                overtimeField.disabled = false;
+                if (hoursField.value === '0') hoursField.value = '4';
+                siteRequired.innerHTML = '(ضروري)';
+                siteRequired.className = 'required';
+            } else {
+                infoBox.innerHTML = '❌ غياب / مرض / إجازة / راحة: لا يتم حساب أي أجر (0 يوم)';
+                hoursField.value = '0';
+                hoursField.disabled = true;
+                overtimeField.value = '0';
+                overtimeField.disabled = true;
+                siteRequired.innerHTML = '(اختياري)';
+                siteRequired.className = 'optional';
+            }
+        }
+        
+        async function saveAttendance() {
+            var date = document.getElementById('date').value;
+            var workerId = document.getElementById('workerId').value;
+            var siteId = document.getElementById('siteId').value;
+            var hours = parseFloat(document.getElementById('hours').value) || 0;
+            var overtime = parseFloat(document.getElementById('overtime').value) || 0;
+            var attendanceType = document.querySelector('input[name="attendanceType"]:checked').value;
+            var customReason = document.getElementById('customReason').value.trim();
+            var msg = document.getElementById('message');
+            
+            if (!workerId) {
+                msg.innerHTML = '<div class="alert-error">⚠️ اختر العامل</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            if ((attendanceType === 'present' || attendanceType === 'halfday') && !siteId) {
+                msg.innerHTML = '<div class="alert-error">⚠️ اختر موقع العمل (ضروري للحضور ونصف اليوم)</div>';
+                setTimeout(() => msg.innerHTML = '', 3000);
+                return;
+            }
+            
+            // ✅ منع تكرار تسجيل نفس العامل في نفس اليوم
+            const alreadyExists = existingAttendance.some(att => att.workerId === workerId);
+            
+            if (alreadyExists) {
+                msg.innerHTML = '<div class="alert-error">❌ هذا العامل تم تسجيل حضوره بالفعل في هذا اليوم! لا يمكن تسجيله مرة أخرى.</div>';
+                setTimeout(() => msg.innerHTML = '', 4000);
+                return;
+            }
+            
+            var daysCount = 0;
+            if (attendanceType === 'present') daysCount = 1;
+            else if (attendanceType === 'halfday') daysCount = 0.5;
+            else daysCount = 0;
+            
+            var statusText = '';
+            switch(attendanceType) {
+                case 'present': statusText = 'حاضر'; break;
+                case 'halfday': statusText = 'نصف يوم'; break;
+                case 'absent': statusText = 'غائب'; break;
+                case 'sick': statusText = 'مرض'; break;
+                case 'vacation': statusText = 'إجازة'; break;
+                case 'rest': statusText = 'راحة'; break;
+            }
+            
+            try {
+                var siteName = '';
+                if (siteId) {
+                    var siteDoc = await db.collection('sites').doc(siteId).get();
+                    siteName = siteDoc.exists ? siteDoc.data().name : siteId;
+                } else {
+                    siteName = 'غير محدد';
+                }
+                
+                await db.collection('attendance').add({
+                    workerId: workerId,
+                    siteId: siteId || 'none',
+                    siteName: siteName,
+                    date: date,
+                    hours: hours,
+                    overtime: overtime,
+                    totalHours: hours + overtime,
+                    daysCount: daysCount,
+                    attendanceType: attendanceType,
+                    attendanceStatus: statusText,
+                    customReason: customReason,
+                    timestamp: new Date().toISOString()
+                });
+                
+                var dayText = daysCount === 1 ? 'يوم كامل' : (daysCount === 0.5 ? 'نصف يوم' : 'لا يحسب');
+                msg.innerHTML = `<div class="alert-success">✅ تم تسجيل ${statusText} - ${dayText} - ${hours} ساعة عادي + ${overtime} ساعة سهر</div>`;
+                
+                document.getElementById('hours').value = '0';
+                document.getElementById('overtime').value = '0';
+                document.getElementById('customReason').value = '';
+                
+                await loadTodayStats(); // تحديث القائمة والإحصائيات
+                setTimeout(() => msg.innerHTML = '', 3000);
+            } catch(err) {
+                msg.innerHTML = `<div class="alert-error">❌ ${err.message}</div>`;
+                setTimeout(() => msg.innerHTML = '', 3000);
+            }
+        }
+        
+        document.getElementById('date').addEventListener('change', function() {
+            loadTodayStats();
+        });
+        
+        loadWorkers();
+        loadSites();
+        loadTodayStats();
+        updateFormByType();
+    </script>
+</body>
+</html>

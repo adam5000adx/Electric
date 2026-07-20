@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المواقع - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        if (!localStorage.getItem('contractorLoggedIn')) { window.location.href = 'contractor-login.html'; }
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .site-card {
+            background: rgba(15, 25, 45, 0.7);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        .site-card:hover {
+            background: rgba(0, 255, 255, 0.1);
+            transform: translateX(5px);
+            border-color: #00ffff;
+        }
+        .site-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        .site-stats {
+            font-size: 13px;
+            color: #ccc;
+            margin-top: 8px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .site-stats span {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .site-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .site-actions button {
+            width: auto;
+            padding: 6px 15px;
+            font-size: 13px;
+        }
+        .edit-mode input {
+            width: auto;
+            display: inline-block;
+            margin: 0;
+            padding: 8px;
+        }
+        .add-site-form {
+            background: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(0,102,255,0.1));
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        .add-site-form h3 {
+            margin-bottom: 15px;
+            color: #00ffff;
+        }
+        .add-site-form input {
+            width: 70%;
+            margin-left: 10px;
+        }
+        .add-site-form button {
+            width: 25%;
+            background: linear-gradient(90deg, #00ffff, #0066ff);
+        }
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            cursor: pointer;
+        }
+        .stat-box:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        .stat-label {
+            color: #888;
+            font-size: 13px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(0,255,255,0.2);
+        }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .edit-btn { background: #ffc107 !important; color: #333 !important; }
+        .delete-btn { background: #dc3545 !important; }
+        .save-btn { background: #28a745 !important; }
+        .cancel-btn { background: #6c757d !important; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0a1a2f 100%);
+            border: 2px solid #00ffff;
+            border-radius: 25px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            background: linear-gradient(90deg, #00ffff, #0066ff);
+            color: #fff;
+            width: auto;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .close-modal { color: #00ffff; float: left; cursor: pointer; font-size: 28px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">📍 إدارة مواقع العمل</span>
+            <a href="contractor.html">📊 لوحة التحكم</a>
+            <a href="manage-workers.html">👷 العمال</a>
+            <a href="add-attendance.html">✅ الحضور</a>
+            <a href="add-food.html">🍔 الأكل</a>
+            <a href="add-loan.html">💰 السلف</a>
+            <a href="reports.html">📈 التقارير</a>
+            <a href="index.html" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats">
+            <div class="stat-box" onclick="showModal('📊 إجمالي المواقع', document.getElementById('totalSites').innerText + ' موقع')">
+                <div class="stat-number" id="totalSites">0</div>
+                <div class="stat-label">إجمالي المواقع</div>
+            </div>
+            <div class="stat-box" onclick="showModal('📊 إجمالي ساعات العمل', document.getElementById('totalHoursAll').innerText + ' ساعة')">
+                <div class="stat-number" id="totalHoursAll">0</div>
+                <div class="stat-label">إجمالي الساعات</div>
+            </div>
+            <div class="stat-box" onclick="showModal('💰 إجمالي التكلفة', document.getElementById('totalCostAll').innerText + ' جنيه')">
+                <div class="stat-number" id="totalCostAll">0</div>
+                <div class="stat-label">إجمالي التكلفة</div>
+            </div>
+            <div class="stat-box" onclick="showModal('🍔 إجمالي خصم الأكل', document.getElementById('totalFoodAll').innerText + ' جنيه')">
+                <div class="stat-number" id="totalFoodAll">0</div>
+                <div class="stat-label">خصم الأكل</div>
+            </div>
+        </div>
+
+        <!-- نموذج إضافة موقع جديد -->
+        <div class="add-site-form">
+            <h3>➕ إضافة موقع جديد</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="newSiteName" placeholder="اسم الموقع (مثال: 56, 73, كباين)" style="flex:3;">
+                <button onclick="addSite()" style="flex:1;">إضافة الموقع</button>
+            </div>
+            <div id="addMessage" style="margin-top: 10px; font-size: 14px;"></div>
+        </div>
+
+        <!-- قائمة المواقع الحالية -->
+        <div class="form-box" style="max-width: 100%;">
+            <h2>📋 قائمة مواقع العمل</h2>
+            <div id="sitesList">✨ جاري التحميل...</div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026</p>
+        </div>
+    </div>
+
+    <!-- Modal for details -->
+    <div id="detailsModal" class="modal" onclick="closeModalOnOutside(event)">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="color:#00ffff; margin-bottom: 20px;">التفاصيل</h3>
+            <div id="modalBody" style="margin: 20px 0; font-size: 16px; line-height: 1.8; text-align: right;"></div>
+            <button onclick="closeModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        let editingSiteId = null;
+        let allWorkersData = {};
+
+        function getToday() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+        
+        function closeModal() { document.getElementById('detailsModal').style.display = 'none'; }
+        function closeModalOnOutside(e) { if (e.target === document.getElementById('detailsModal')) closeModal(); }
+
+        // جلب بيانات العمال (الأجور)
+        async function loadAllWorkersData() {
+            const snapshot = await db.collection('workers').where('status', '==', 'active').get();
+            snapshot.forEach(doc => {
+                allWorkersData[doc.id] = doc.data();
+            });
+        }
+
+        // حساب أجر عامل بناءً على حضوره في موقع معين
+        function calculateWorkerSalary(attendanceRecords, workerId) {
+            const worker = allWorkersData[workerId];
+            if (!worker) return 0;
+            
+            const salaryValue = worker.salaryValue || 0;
+            const salaryType = worker.salaryType || 'daily';
+            
+            let totalDays = 0;
+            let totalHours = 0;
+            
+            attendanceRecords.forEach(record => {
+                if (record.workerId === workerId) {
+                    if (record.daysCount) {
+                        totalDays += record.daysCount;
+                    } else {
+                        if (record.attendanceType === 'present') totalDays += 1;
+                        else if (record.attendanceType === 'halfday') totalDays += 0.5;
+                    }
+                    totalHours += (record.hours || 0) + (record.overtime || 0);
+                }
+            });
+            
+            if (salaryType === 'daily') {
+                return totalDays * salaryValue;
+            } else {
+                return totalHours * salaryValue;
+            }
+        }
+
+        // تحميل وعرض المواقع مع حساباتها
+        async function loadSites() {
+            try {
+                await loadAllWorkersData();
+                
+                const sitesSnapshot = await db.collection('sites').orderBy('name').get();
+                const allAttendance = await db.collection('attendance').get();
+                const allFood = await db.collection('food').get();
+                
+                // تجميع الحضور حسب الموقع
+                const attendanceBySite = {};
+                allAttendance.forEach(doc => {
+                    const data = doc.data();
+                    const siteId = data.siteId;
+                    if (!attendanceBySite[siteId]) attendanceBySite[siteId] = [];
+                    attendanceBySite[siteId].push(data);
+                });
+                
+                // تجميع الأكل حسب الموقع
+                const foodBySite = {};
+                allFood.forEach(doc => {
+                    const data = doc.data();
+                    const siteId = data.siteId;
+                    if (siteId) {
+                        if (!foodBySite[siteId]) foodBySite[siteId] = [];
+                        foodBySite[siteId].push(data);
+                    }
+                });
+                
+                // تحديث الإحصائيات العامة
+                let totalHoursAll = 0;
+                let totalCostAll = 0;
+                let totalFoodAll = 0;
+                
+                for (let siteId in attendanceBySite) {
+                    const records = attendanceBySite[siteId];
+                    let siteHours = 0;
+                    let siteCost = 0;
+                    
+                    // حساب ساعات الموقع
+                    records.forEach(record => {
+                        siteHours += (record.hours || 0) + (record.overtime || 0);
+                    });
+                    totalHoursAll += siteHours;
+                    
+                    // حساب تكلفة الموقع (أجور العمال)
+                    const uniqueWorkers = [...new Set(records.map(r => r.workerId))];
+                    uniqueWorkers.forEach(workerId => {
+                        siteCost += calculateWorkerSalary(records, workerId);
+                    });
+                    totalCostAll += siteCost;
+                }
+                
+                // حساب إجمالي خصم الأكل
+                for (let siteId in foodBySite) {
+                    foodBySite[siteId].forEach(food => {
+                        totalFoodAll += food.totalPrice || 0;
+                    });
+                }
+                
+                document.getElementById('totalSites').innerText = sitesSnapshot.size;
+                document.getElementById('totalHoursAll').innerText = totalHoursAll;
+                document.getElementById('totalCostAll').innerText = totalCostAll.toFixed(2);
+                document.getElementById('totalFoodAll').innerText = totalFoodAll.toFixed(2);
+                
+                if (sitesSnapshot.empty) {
+                    document.getElementById('sitesList').innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <p>📭 لا توجد مواقع حالياً</p>
+                            <p>أضف موقعك الأول من النموذج أعلاه</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                for (const doc of sitesSnapshot.docs) {
+                    const siteId = doc.id;
+                    const siteName = doc.data().name;
+                    
+                    // بيانات الحضور في هذا الموقع
+                    const siteAttendance = attendanceBySite[siteId] || [];
+                    const siteFood = foodBySite[siteId] || [];
+                    
+                    // حساب إحصائيات الموقع
+                    let totalHours = 0;
+                    let totalWorkers = new Set();
+                    let siteCost = 0;
+                    
+                    siteAttendance.forEach(record => {
+                        totalHours += (record.hours || 0) + (record.overtime || 0);
+                        totalWorkers.add(record.workerId);
+                    });
+                    
+                    // حساب تكلفة الموقع (أجور العمال)
+                    const uniqueWorkers = [...totalWorkers];
+                    uniqueWorkers.forEach(workerId => {
+                        siteCost += calculateWorkerSalary(siteAttendance, workerId);
+                    });
+                    
+                    // حساب خصم الأكل في الموقع
+                    let siteFoodTotal = 0;
+                    siteFood.forEach(food => {
+                        siteFoodTotal += food.totalPrice || 0;
+                    });
+                    
+                    const netCost = siteCost - siteFoodTotal;
+                    
+                    html += `
+                        <div class="site-card" id="site-${siteId}">
+                            <div class="site-info">
+                                <span class="site-name">📍 ${escapeHtml(siteName)}</span>
+                                <div class="site-stats">
+                                    <span>👷 ${totalWorkers.size} عامل</span>
+                                    <span>⏱️ ${totalHours} ساعة</span>
+                                    <span>💰 ${siteCost.toFixed(2)} ج (أجور)</span>
+                                    <span>🍔 - ${siteFoodTotal.toFixed(2)} ج (أكل)</span>
+                                    <span style="color:#00ff00;">✅ ${netCost.toFixed(2)} ج (صافي)</span>
+                                </div>
+                            </div>
+                            <div class="site-actions">
+                                <button class="edit-btn" onclick="editSite('${siteId}', '${escapeHtml(siteName)}')">✏️ تعديل</button>
+                                <button class="delete-btn" onclick="deleteSite('${siteId}', '${escapeHtml(siteName)}')">🗑️ حذف</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                document.getElementById('sitesList').innerHTML = html;
+            } catch(error) {
+                console.error("خطأ:", error);
+                document.getElementById('sitesList').innerHTML = '<p style="color: red;">❌ خطأ: ' + error.message + '</p>';
+            }
+        }
+
+        // إضافة موقع جديد
+        async function addSite() {
+            const name = document.getElementById('newSiteName').value.trim();
+            const messageDiv = document.getElementById('addMessage');
+            
+            if (!name) {
+                messageDiv.innerHTML = '<div class="alert alert-error">⚠️ الرجاء إدخال اسم الموقع</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            const existing = await db.collection('sites').where('name', '==', name).get();
+            if (!existing.empty) {
+                messageDiv.innerHTML = '<div class="alert alert-error">❌ هذا الموقع موجود بالفعل</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            try {
+                await db.collection('sites').add({
+                    name: name,
+                    createdAt: new Date().toISOString()
+                });
+                
+                messageDiv.innerHTML = '<div class="alert alert-success">✅ تم إضافة الموقع بنجاح</div>';
+                document.getElementById('newSiteName').value = '';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+                loadSites();
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="alert alert-error">❌ خطأ: ${error.message}</div>`;
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+            }
+        }
+
+        // تعديل موقع
+        function editSite(siteId, currentName) {
+            const siteCard = document.getElementById(`site-${siteId}`);
+            siteCard.innerHTML = `
+                <div class="site-info edit-mode" style="flex-grow: 1;">
+                    <input type="text" id="edit-name-${siteId}" value="${currentName}" style="width: 200px; padding: 8px; border-radius: 8px;">
+                </div>
+                <div class="site-actions">
+                    <button class="save-btn" onclick="saveSite('${siteId}')">💾 حفظ</button>
+                    <button class="cancel-btn" onclick="loadSites()">❌ إلغاء</button>
+                </div>
+            `;
+        }
+
+        // حفظ التعديل
+        async function saveSite(siteId) {
+            const newName = document.getElementById(`edit-name-${siteId}`).value.trim();
+            if (!newName) {
+                alert('⚠️ الرجاء إدخال اسم صحيح');
+                return;
+            }
+            try {
+                await db.collection('sites').doc(siteId).update({ name: newName });
+                loadSites();
+            } catch (error) {
+                alert('❌ خطأ: ' + error.message);
+            }
+        }
+
+        // حذف موقع
+        async function deleteSite(siteId, siteName) {
+            const attendanceCheck = await db.collection('attendance').where('siteId', '==', siteId).limit(1).get();
+            const hasAttendance = !attendanceCheck.empty;
+            
+            let message = `⚠️ هل أنت متأكد من حذف موقع "${siteName}"؟`;
+            if (hasAttendance) {
+                message += `\n\n⚠️ تحذير: هذا الموقع لديه سجل حضور. سيتم حذف سجل الحضور المرتبط به أيضاً.`;
+            }
+            
+            if (confirm(message)) {
+                try {
+                    const attendanceSnapshot = await db.collection('attendance').where('siteId', '==', siteId).get();
+                    const batch = db.batch();
+                    attendanceSnapshot.forEach(doc => { batch.delete(doc.ref); });
+                    batch.delete(db.collection('sites').doc(siteId));
+                    await batch.commit();
+                    alert(`✅ تم حذف موقع "${siteName}" وجميع بياناته`);
+                    loadSites();
+                } catch(error) {
+                    alert('❌ خطأ: ' + error.message);
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadSites();
+    </script>
+</body>
+</html>

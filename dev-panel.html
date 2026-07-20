@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة المطور - نظام الكهرباء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBy35JPmxwrzy7VDgnVXemcM0Pz20V4Qvk",
+            authDomain: "play-egpt.firebaseapp.com",
+            projectId: "play-egpt",
+            storageBucket: "play-egpt.firebasestorage.app",
+            messagingSenderId: "569921942969",
+            appId: "1:569921942969:web:389f3c3cffdf714f083268"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
+    <style>
+        .dev-header {
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .dev-header h1 { color: #fff; margin: 0; font-size: 28px; }
+        .dev-header p { color: #fff; margin: 10px 0 0; opacity: 0.9; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card-dev {
+            background: rgba(20, 30, 50, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 0, 255, 0.5);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .stat-card-dev:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+        }
+        .stat-number-dev {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .stat-label-dev {
+            color: #888;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .tool-card {
+            background: rgba(15, 25, 45, 0.7);
+            backdrop-filter: blur(5px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            border-color: #ff00ff;
+            transform: translateY(-3px);
+        }
+        .tool-icon { font-size: 40px; margin-bottom: 10px; }
+        .tool-title { font-size: 18px; font-weight: bold; color: #00ffff; margin-bottom: 8px; }
+        .tool-desc { font-size: 12px; color: #888; }
+        .db-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .db-table th, .db-table td { padding: 10px; text-align: center; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        .db-table th { color: #ff00ff; background: rgba(255, 0, 255, 0.1); }
+        .footer { text-align: center; padding: 20px; margin-top: 30px; border-top: 1px solid rgba(0,255,255,0.2); }
+        .footer p { color: #888; font-size: 12px; }
+        .footer span { color: #00ffff; font-weight: bold; }
+        .welcome-name { color: #ff00ff; font-weight: bold; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #0a0f1e 0%, #0a1a2f 100%);
+            border: 2px solid #ff00ff;
+            border-radius: 25px;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            color: #fff;
+            width: auto;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .close-modal { color: #ff00ff; float: left; cursor: pointer; font-size: 28px; }
+        .danger-btn { background: #dc3545 !important; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        th { color: #ff00ff; }
+        .log-row { cursor: pointer; transition: all 0.3s; }
+        .log-row:hover { background: rgba(255, 0, 255, 0.1); transform: scale(1.01); }
+        pre { background: #0a0f1e; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 11px; text-align: left; direction: ltr; }
+        .developer-badge {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, #1a0a2e, #0d1b2a);
+            border: 2px solid #ff00ff;
+            border-radius: 50px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+            animation: glow 2s ease-in-out infinite;
+            direction: ltr;
+        }
+        .developer-badge:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(255, 0, 255, 0.8); }
+        .developer-badge .icon { font-size: 24px; filter: drop-shadow(0 0 5px #ff00ff); }
+        .developer-badge .title { font-weight: bold; background: linear-gradient(135deg, #ff00ff, #00ffff); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 14px; }
+        .developer-badge .name { color: #00ffff; font-weight: bold; letter-spacing: 1px; }
+        .developer-badge .role { font-size: 10px; color: #888; }
+        @keyframes glow { 0%, 100% { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255, 0, 255, 0.5); } 50% { border-color: #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.5); } }
+        @media (max-width: 768px) { .developer-badge { padding: 5px 15px; bottom: 10px; left: 10px; } .developer-badge .title, .developer-badge .name { font-size: 10px; } .developer-badge .icon { font-size: 16px; } }
+        
+        .logs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .logs-table th, .logs-table td { padding: 8px; text-align: center; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        .logs-table th { background: rgba(255, 0, 255, 0.2); color: #ff00ff; }
+        .empty-message { text-align: center; padding: 40px; color: #888; font-style: italic; }
+        .alert-error { background: rgba(255,0,0,0.2); color: #ff6666; padding: 10px; border-radius: 8px; margin: 10px 0; }
+        .alert-success { background: rgba(0,255,0,0.2); color: #00ff00; padding: 10px; border-radius: 8px; margin: 10px 0; }
+        .location-box {
+            background: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1));
+            border: 2px solid #00ffff;
+        }
+        .location-btn {
+            background: #00ffff;
+            color: #000;
+            width: auto;
+            padding: 10px 25px;
+            margin-top: 10px;
+        }
+        .location-status {
+            font-size: 14px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <span style="flex-grow: 1;">⚡ لوحة تحكم المطور ⚡</span>
+            <a href="dev-files.html">📁 مدير الملفات</a>
+            <a href="index.html" onclick="logoutDev()" class="logout-btn">🚪 خروج</a>
+        </div>
+
+        <div class="dev-header">
+            <h1>👨‍💻 مرحباً يا <span class="welcome-name">Adam Ahmed</span></h1>
+            <p>أنت المدير الكامل للنظام - لديك صلاحيات التحكم في كل شيء</p>
+            <p style="font-size: 12px; margin-top: 10px;">⚡ Developer Access Only ⚡</p>
+        </div>
+
+        <!-- طلب الموقع الإجباري -->
+        <div class="form-box location-box" id="locationBox">
+            <h2 style="color:#00ffff;">📍 تحديد الموقع الجغرافي (إجباري)</h2>
+            <div id="locationStatus" class="location-status">⚠️ لم يتم تحديد الموقع بعد - لا يمكن حذف أي بيانات</div>
+            <button onclick="requestLocation()" class="location-btn">📍 السماح بتحديد موقعي</button>
+            <p style="font-size:12px; color:#888; margin-top:10px;">🔒 لا يمكن حذف أي بيانات بدون تحديد الموقع أولاً</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card-dev" onclick="showSystemInfo()">
+                <div class="stat-number-dev" id="totalDocs">0</div>
+                <div class="stat-label-dev">📄 إجمالي الوثائق</div>
+            </div>
+            <div class="stat-card-dev" onclick="showCollections()">
+                <div class="stat-number-dev" id="totalCollections">0</div>
+                <div class="stat-label-dev">🗂️ عدد المجموعات</div>
+            </div>
+            <div class="stat-card-dev" onclick="showWorkersCount()">
+                <div class="stat-number-dev" id="totalWorkers">0</div>
+                <div class="stat-label-dev">👷 العمال النشطين</div>
+            </div>
+            <div class="stat-card-dev" onclick="showSitesCount()">
+                <div class="stat-number-dev" id="totalSites">0</div>
+                <div class="stat-label-dev">📍 مواقع العمل</div>
+            </div>
+        </div>
+
+        <h2 style="color:#00ffff; margin-bottom: 20px;">🛠️ أدوات المطور</h2>
+        <div class="tools-grid">
+            <div class="tool-card" onclick="window.location.href='dev-files.html'">
+                <div class="tool-icon">📁</div>
+                <div class="tool-title">مدير الملفات</div>
+                <div class="tool-desc">عرض وتحميل وإدارة ملفات المشروع</div>
+            </div>
+            <div class="tool-card" onclick="exportData()">
+                <div class="tool-icon">📥</div>
+                <div class="tool-title">تصدير البيانات</div>
+                <div class="tool-desc">تصدير كل بيانات Firebase كملف JSON</div>
+            </div>
+            <div class="tool-card" onclick="showDatabaseStats()">
+                <div class="tool-icon">📊</div>
+                <div class="tool-title">إحصائيات Firebase</div>
+                <div class="tool-desc">عرض تفاصيل قاعدة البيانات</div>
+            </div>
+            <div class="tool-card" onclick="backupData()">
+                <div class="tool-icon">💾</div>
+                <div class="tool-title">نسخ احتياطي</div>
+                <div class="tool-desc">إنشاء نسخة احتياطية من البيانات</div>
+            </div>
+            <div class="tool-card" onclick="clearCache()">
+                <div class="tool-icon">🗑️</div>
+                <div class="tool-title">مسح الكاش</div>
+                <div class="tool-desc">مسح ذاكرة التخزين المؤقت</div>
+            </div>
+            <div class="tool-card" onclick="showSystemLogs()">
+                <div class="tool-icon">📋</div>
+                <div class="tool-title">سجل النظام</div>
+                <div class="tool-desc">عرض سجل عمليات النظام</div>
+            </div>
+        </div>
+
+        <div class="form-box">
+            <h2 style="color:#00ffff;">📊 تفاصيل قاعدة البيانات</h2>
+            <div id="dbDetails">✨ جاري تحميل البيانات...</div>
+        </div>
+
+        <div class="form-box">
+            <h2 style="color:#ff00ff;">📋 سجل عمليات الحذف والإدارة</h2>
+            <div id="logsList">✨ جاري التحميل...</div>
+        </div>
+
+        <div class="form-box" style="border-color: #ff4444;">
+            <h2 style="color:#ff4444;">⚠️ إجراءات خطيرة (بحذر شديد)</h2>
+            <div id="dangerMessage" style="margin-bottom: 15px;"></div>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                <h4 style="color:#ff4444;">🗑️ حذف كل بيانات Firebase</h4>
+                <p style="font-size:12px;">⚠️ سيتم حذف: العمال - المواقع - الحضور - الأكل - السلف<br>✅ السجل (logs) سيظل محفوظاً لمعرفة من قام بالحذف<br>✅ كلمة السر الخطيرة محفوظة في settings ولا تتحذف</p>
+                <input type="password" id="dangerPassword" placeholder="كلمة سر الإجراءات الخطيرة" style="width: 200px; display: inline-block; margin-left: 10px; padding: 8px;">
+                <input type="text" id="confirmDeleteText" placeholder="اكتب DELETE للتأكيد" style="width: 150px; display: inline-block; margin-left: 10px; padding: 8px;">
+                <button onclick="clearAllDataSecure()" style="background:#dc3545; width: auto; margin-top: 10px;">🗑️ حذف كل البيانات</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Developed by <span>Adam Ahmed</span> © 2026 | <span style="color:#ff00ff;">المطور: Adam Ahmed</span></p>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal" onclick="closeModalOnOutside(event)">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="color:#ff00ff; margin-bottom: 20px;">التفاصيل</h3>
+            <div id="modalBody" style="margin: 20px 0; font-size: 16px; line-height: 1.8; text-align: right;"></div>
+            <button onclick="closeModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <div class="developer-badge">
+        <div class="icon">⚡</div>
+        <div>
+            <div class="title">Developed & Secured by</div>
+            <div class="name">Adam Ahmed</div>
+            <div class="role">Full Stack Developer</div>
+        </div>
+    </div>
+
+    <script>
+        if (!localStorage.getItem('devLoggedIn')) {
+            window.location.href = 'dev-login.html';
+        }
+        
+        let DANGER_PASSWORD = "";
+        let userLocation = null;
+        let locationAllowed = false;
+        
+        let modalTitle = document.getElementById('modalTitle');
+        let modalBody = document.getElementById('modalBody');
+        
+        // جلب كلمة السر الخطيرة من Firebase
+        async function loadDangerPassword() {
+            try {
+                const docRef = db.collection('settings').doc('passwords');
+                const doc = await docRef.get();
+                
+                if (doc.exists) {
+                    const data = doc.data();
+                    DANGER_PASSWORD = data.dangerPassword;
+                    console.log('✅ تم تحميل كلمة السر الخطيرة من Firebase');
+                    document.getElementById('dangerMessage').innerHTML = '<div class="alert-success">✅ تم تحميل كلمة السر الخطيرة</div>';
+                    setTimeout(() => document.getElementById('dangerMessage').innerHTML = '', 2000);
+                } else {
+                    console.log('⚠️ لم يتم العثور على كلمة السر الخطيرة');
+                    DANGER_PASSWORD = "Adam2026@MasterKey";
+                }
+            } catch(error) {
+                console.error('❌ خطأ في تحميل كلمة السر:', error);
+                DANGER_PASSWORD = "Adam2026@MasterKey";
+            }
+        }
+        
+        // طلب الموقع الجغرافي
+        async function requestLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    document.getElementById('locationStatus').innerHTML = '❌ متصفحك لا يدعم تحديد الموقع';
+                    reject('Geolocation not supported');
+                    return;
+                }
+                
+                document.getElementById('locationStatus').innerHTML = '⏳ جاري تحديد موقعك...';
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        };
+                        locationAllowed = true;
+                        document.getElementById('locationStatus').innerHTML = '✅ تم تحديد موقعك: ' + 
+                            userLocation.lat.toFixed(6) + ', ' + userLocation.lon.toFixed(6) + 
+                            ' (دقة ' + Math.round(userLocation.accuracy) + ' متر)';
+                        resolve(userLocation);
+                    },
+                    (error) => {
+                        let errorMsg = '';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMsg = '❌ رفضت السماح بتحديد الموقع - لا يمكن متابعة الحذف';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMsg = '❌ معلومات الموقع غير متاحة حالياً';
+                                break;
+                            case error.TIMEOUT:
+                                errorMsg = '❌ انتهى وقت محاولة تحديد الموقع';
+                                break;
+                            default:
+                                errorMsg = '❌ خطأ في تحديد الموقع: ' + error.message;
+                        }
+                        document.getElementById('locationStatus').innerHTML = errorMsg;
+                        locationAllowed = false;
+                        reject(errorMsg);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+        
+        // التحقق من الموقع قبل أي عملية حذف
+        async function checkLocationBeforeDelete() {
+            if (!locationAllowed || !userLocation) {
+                alert('⚠️ يجب تحديد موقعك الجغرافي أولاً!');
+                await requestLocation();
+                return locationAllowed;
+            }
+            return true;
+        }
+        
+        function showModal(title, content) {
+            modalTitle.innerHTML = title;
+            modalBody.innerHTML = content;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+        
+        function closeModal() { document.getElementById('detailsModal').style.display = 'none'; }
+        function closeModalOnOutside(e) { if (e.target === document.getElementById('detailsModal')) closeModal(); }
+        
+        function logoutDev() {
+            localStorage.removeItem('devLoggedIn');
+            window.location.href = 'index.html';
+        }
+        
+        function showSystemInfo() {
+            showModal('ℹ️ معلومات النظام', `
+                <strong>📅 التاريخ:</strong> ${new Date().toLocaleDateString()}<br>
+                <strong>⏰ الوقت:</strong> ${new Date().toLocaleTimeString()}<br>
+                <strong>🌐 المتصفح:</strong> ${navigator.userAgent.split(' ').slice(-2).join(' ')}<br>
+                <strong>📱 نظام التشغيل:</strong> ${navigator.platform}<br>
+                <strong>👨‍💻 المطور:</strong> Adam Ahmed<br>
+                <strong>📦 الإصدار:</strong> 2.0.0
+            `);
+        }
+        
+        function showCollections() {
+            showModal('🗂️ المجموعات', `
+                <strong>workers</strong> - بيانات العمال<br>
+                <strong>sites</strong> - مواقع العمل<br>
+                <strong>attendance</strong> - سجل الحضور<br>
+                <strong>food</strong> - وجبات الأكل<br>
+                <strong>loans</strong> - السلف والخصومات<br>
+                <strong>logs</strong> - سجل العمليات (لا يمسح)<br>
+                <strong>settings</strong> - الإعدادات وكلمات السر (لا تمسح)
+            `);
+        }
+        
+        function showWorkersCount() {
+            showModal('👷 عدد العمال', `عدد العمال النشطين: ${document.getElementById('totalWorkers').innerText}`);
+        }
+        
+        function showSitesCount() {
+            showModal('📍 عدد المواقع', `عدد مواقع العمل: ${document.getElementById('totalSites').innerText}`);
+        }
+        
+        async function getUserIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch(e) {
+                return 'غير متاح';
+            }
+        }
+        
+        async function getUserLocation() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                return {
+                    country: data.country_name,
+                    city: data.city,
+                    region: data.region,
+                    lat: data.latitude,
+                    lon: data.longitude,
+                    timezone: data.timezone
+                };
+            } catch(e) {
+                return { country: 'غير متاح', city: 'غير متاح', region: 'غير متاح' };
+            }
+        }
+        
+        async function logAction(action, collection, itemId, itemData) {
+            try {
+                const ip = await getUserIP();
+                const geoLocation = await getUserLocation();
+                
+                await db.collection('logs').add({
+                    action: action,
+                    collection: collection,
+                    itemId: itemId,
+                    itemData: itemData,
+                    performedBy: 'Adam Ahmed',
+                    userPhone: '01000000000',
+                    userEmail: 'dev@adamahmed.com',
+                    ip: ip,
+                    location: {
+                        ...geoLocation,
+                        gps: userLocation,
+                        gpsAccuracy: userLocation?.accuracy
+                    },
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent
+                });
+                console.log('✅ تم تسجيل العملية:', action, collection);
+            } catch(e) {
+                console.error('❌ خطأ في تسجيل العملية:', e);
+            }
+        }
+        
+        async function logDangerousAction(action, success, details) {
+            try {
+                const ip = await getUserIP();
+                const geoLocation = await getUserLocation();
+                await db.collection('dangerLogs').add({
+                    action: action,
+                    success: success,
+                    details: details,
+                    performedBy: 'Adam Ahmed',
+                    userPhone: '01000000000',
+                    userEmail: 'dev@adamahmed.com',
+                    ip: ip,
+                    location: {
+                        ...geoLocation,
+                        gps: userLocation,
+                        gpsAccuracy: userLocation?.accuracy
+                    },
+                    timestamp: new Date().toISOString()
+                });
+                console.log('✅ تم تسجيل الإجراء الخطير:', action, success);
+            } catch(e) {
+                console.error('❌ خطأ في تسجيل الإجراء الخطير:', e);
+            }
+        }
+        
+        async function loadDatabaseStats() {
+            const collections = ['workers', 'sites', 'attendance', 'food', 'loans', 'logs', 'settings'];
+            let totalDocs = 0;
+            let html = '<table class="db-table"><tr><th>المجموعة</th><th>عدد الوثائق</th><th>الحالة</th></tr>';
+            
+            for (const col of collections) {
+                try {
+                    const snapshot = await db.collection(col).get();
+                    const count = snapshot.size;
+                    totalDocs += count;
+                    let note = '';
+                    if (col === 'logs') note = '(لا يمسح)';
+                    if (col === 'settings') note = '(لا يمسح - كلمات السر)';
+                    html += `<tr><td>📁 ${col} ${note}</td><td>${count}</td><td>✅ نشط</tr>`;
+                } catch(e) {
+                    html += `<tr><td>📁 ${col}</td><td>0</td><td>⚠️ خطأ</tr>`;
+                }
+            }
+            
+            html += `<tr style="background:rgba(255,0,255,0.1);">}<td><strong>الإجمالي</strong></td><td><strong>${totalDocs}</strong></td><td>-</tr>`;
+            html += '</table>';
+            
+            document.getElementById('totalDocs').innerText = totalDocs;
+            document.getElementById('totalCollections').innerText = collections.length;
+            document.getElementById('dbDetails').innerHTML = html;
+            
+            try {
+                const workersSnap = await db.collection('workers').where('status', '==', 'active').get();
+                document.getElementById('totalWorkers').innerText = workersSnap.size;
+            } catch(e) {
+                document.getElementById('totalWorkers').innerText = '0';
+            }
+            
+            try {
+                const sitesSnap = await db.collection('sites').get();
+                document.getElementById('totalSites').innerText = sitesSnap.size;
+            } catch(e) {
+                document.getElementById('totalSites').innerText = '0';
+            }
+        }
+        
+        async function loadLogs() {
+            try {
+                const snapshot = await db.collection('logs').orderBy('timestamp', 'desc').limit(50).get();
+                if (snapshot.empty) {
+                    document.getElementById('logsList').innerHTML = '<div class="empty-message">📭 لا توجد عمليات مسجلة</div>';
+                    return;
+                }
+                
+                let html = '<div class="table-container"><table class="logs-table">' +
+                    '<thead><tr><th>⏰ الوقت</th><th>⚡ الإجراء</th><th>📁 المجموعة</th><th>📄 المعرف</th><th>👤 المستخدم</th><th>📍 الموقع</th><th>🌐 IP</th></tr></thead><tbody>';
+                
+                for (const doc of snapshot.docs) {
+                    const log = doc.data();
+                    const time = new Date(log.timestamp).toLocaleString('ar-EG');
+                    const actionColor = log.action === 'delete' ? '#ff6666' : '#00ff00';
+                    const locationText = log.location ? `${log.location.city || '-'}, ${log.location.country || '-'}` : '-';
+                    
+                    html += `<tr class="log-row" onclick="showLogDetails('${doc.id}')">
+                        <td style="font-size:11px;">${time}</td>
+                        <td style="color:${actionColor}">${log.action}</td>
+                        <td>${log.collection}</td>
+                        <td>${log.itemId?.substring(0, 8) || '-'}..</td>
+                        <td>${log.performedBy}</td>
+                        <td>${locationText}</td>
+                        <td>${log.ip || '-'}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+                document.getElementById('logsList').innerHTML = html;
+            } catch(e) {
+                console.error('خطأ في تحميل السجل:', e);
+                document.getElementById('logsList').innerHTML = '<div class="empty-message">❌ خطأ في تحميل السجل</div>';
+            }
+        }
+        
+        async function showLogDetails(logId) {
+            try {
+                const doc = await db.collection('logs').doc(logId).get();
+                const log = doc.data();
+                
+                let locationHtml = '';
+                if (log.location) {
+                    let gpsHtml = '';
+                    if (log.location.gps && log.location.gps.lat) {
+                        gpsHtml = `
+                            <h4>📍 الموقع الدقيق (GPS)</h4>
+                            <p>📐 خط العرض: ${log.location.gps.lat}</p>
+                            <p>📐 خط الطول: ${log.location.gps.lon}</p>
+                            <p>🎯 دقة الموقع: ${Math.round(log.location.gpsAccuracy)} متر</p>
+                            <a href="https://www.google.com/maps?q=${log.location.gps.lat},${log.location.gps.lon}" target="_blank" style="color:#00ffff;">🗺️ فتح في خرائط جوجل</a>
+                        `;
+                    }
+                    locationHtml = `
+                        <h4>📍 الموقع الجغرافي (IP)</h4>
+                        <p>🌍 الدولة: ${log.location.country}</p>
+                        <p>🏙️ المدينة: ${log.location.city}</p>
+                        <p>🗺️ المنطقة: ${log.location.region}</p>
+                        ${gpsHtml}
+                    `;
+                }
+                
+                showModal('تفاصيل العملية', `
+                    <div style="text-align:right;">
+                        <strong>⏰ الوقت:</strong> ${new Date(log.timestamp).toLocaleString()}<br>
+                        <strong>⚡ الإجراء:</strong> ${log.action}<br>
+                        <strong>📁 المجموعة:</strong> ${log.collection}<br>
+                        <strong>📄 المعرف:</strong> ${log.itemId}<br>
+                        <strong>👤 المستخدم:</strong> ${log.performedBy}<br>
+                        <strong>📞 الهاتف:</strong> ${log.userPhone}<br>
+                        <strong>🌐 IP:</strong> ${log.ip}<br>
+                        ${locationHtml}
+                        <hr>
+                        <strong>📦 البيانات المحذوفة:</strong>
+                        <pre>${JSON.stringify(log.itemData, null, 2)}</pre>
+                    </div>
+                `);
+            } catch(e) {
+                alert('خطأ في عرض التفاصيل: ' + e.message);
+            }
+        }
+        
+        async function showDatabaseStats() {
+            const collections = ['workers', 'sites', 'attendance', 'food', 'loans', 'logs', 'settings'];
+            let html = '<div style="text-align:right;">';
+            for (const col of collections) {
+                try {
+                    const snapshot = await db.collection(col).get();
+                    html += `<strong>📁 ${col}:</strong> ${snapshot.size} وثيقة<br>`;
+                } catch(e) {
+                    html += `<strong>📁 ${col}:</strong> خطأ<br>`;
+                }
+            }
+            html += '</div>';
+            showModal('📊 إحصائيات Firebase', html);
+        }
+        
+        async function exportData() {
+            const collections = ['workers', 'sites', 'attendance', 'food', 'loans', 'logs', 'settings'];
+            const allData = {};
+            
+            for (const col of collections) {
+                try {
+                    const snapshot = await db.collection(col).get();
+                    allData[col] = [];
+                    snapshot.forEach(doc => {
+                        allData[col].push({ id: doc.id, ...doc.data() });
+                    });
+                } catch(e) {
+                    allData[col] = [];
+                }
+            }
+            
+            const dataStr = JSON.stringify(allData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `electrical_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            const msg = document.getElementById('dangerMessage');
+            msg.innerHTML = '<div class="alert-success">✅ تم تصدير البيانات بنجاح</div>';
+            setTimeout(() => msg.innerHTML = '', 3000);
+        }
+        
+        function backupData() {
+            showModal('💾 نسخة احتياطية', `
+                تم إنشاء نسخة احتياطية من البيانات.<br>
+                يمكنك استعادتها من ملف JSON الذي تم تصديره.<br><br>
+                <strong>📅 تاريخ النسخة:</strong> ${new Date().toLocaleString()}<br>
+                <strong>👨‍💻 تم بواسطة:</strong> Adam Ahmed
+            `);
+        }
+        
+        function clearCache() {
+            if (confirm('🗑️ هل تريد مسح ذاكرة التخزين المؤقت؟')) {
+                localStorage.clear();
+                showModal('✅ تم المسح', 'تم مسح الكاش بنجاح. سيتم إعادة تحميل الصفحة.');
+                setTimeout(() => window.location.reload(), 2000);
+            }
+        }
+        
+        function showSystemLogs() {
+            showModal('📋 سجل النظام', `
+                <strong>✅ تاريخ إنشاء النظام:</strong> ${new Date().toLocaleDateString()}<br>
+                <strong>✅ آخر تحديث:</strong> ${new Date().toLocaleString()}<br>
+                <strong>✅ إجمالي الوثائق:</strong> ${document.getElementById('totalDocs').innerText}<br>
+                <strong>✅ العمال النشطين:</strong> ${document.getElementById('totalWorkers').innerText}<br>
+                <strong>✅ المواقع:</strong> ${document.getElementById('totalSites').innerText}<br>
+                <strong>👨‍💻 المطور:</strong> Adam Ahmed<br>
+                <strong>📦 الإصدار:</strong> 2.0.0
+            `);
+        }
+        
+        async function clearAllDataSecure() {
+            // التحقق من الموقع أولاً
+            const locationOk = await checkLocationBeforeDelete();
+            if (!locationOk) {
+                alert('❌ لا يمكن حذف البيانات بدون تحديد الموقع الجغرافي!');
+                return;
+            }
+            
+            // التحقق من تحميل كلمة السر
+            if (!DANGER_PASSWORD) {
+                await loadDangerPassword();
+                if (!DANGER_PASSWORD) {
+                    alert('❌ لم يتم تحميل كلمة السر، حاول مرة أخرى');
+                    return;
+                }
+            }
+            
+            const password = document.getElementById('dangerPassword').value;
+            const confirmText = document.getElementById('confirmDeleteText').value;
+            const msgDiv = document.getElementById('dangerMessage');
+            
+            if (password !== DANGER_PASSWORD) {
+                msgDiv.innerHTML = '<div class="alert-error">❌ كلمة السر غير صحيحة!</div>';
+                await logDangerousAction('clear_all_data', false, 'كلمة سر خاطئة');
+                setTimeout(() => msgDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (confirmText !== 'DELETE') {
+                msgDiv.innerHTML = '<div class="alert-error">❌ اكتب DELETE للتأكيد!</div>';
+                await logDangerousAction('clear_all_data', false, 'لم يكتب DELETE');
+                setTimeout(() => msgDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (confirm('⚠️ تحذير خطير جداً! هل أنت متأكد من حذف كل بيانات Firebase؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+                // المجموعات اللي هتتمسح (logs و settings مش موجودين عشان يفضلوا)
+                const collectionsToDelete = ['workers', 'sites', 'attendance', 'food', 'loans'];
+                
+                await logAction('delete_all', 'all_data', 'ALL', { 
+                    deletedBy: 'Adam Ahmed', 
+                    timestamp: new Date().toISOString(),
+                    location: userLocation
+                });
+                
+                for (const col of collectionsToDelete) {
+                    try {
+                        const snapshot = await db.collection(col).get();
+                        for (const doc of snapshot.docs) {
+                            await db.collection(col).doc(doc.id).delete();
+                        }
+                        console.log(`✅ تم مسح مجموعة: ${col}`);
+                    } catch(e) {
+                        console.error(`خطأ في مسح ${col}:`, e);
+                    }
+                }
+                
+                await logDangerousAction('clear_all_data', true, 'تم حذف جميع البيانات (logs و settings لم تمسح)');
+                msgDiv.innerHTML = '<div class="alert-error">🗑️ تم حذف جميع البيانات - السجل والإعدادات محفوظين</div>';
+                setTimeout(() => msgDiv.innerHTML = '', 3000);
+                
+                loadDatabaseStats();
+                loadLogs();
+            }
+        }
+        
+        // تحميل كلمة السر عند بدء الصفحة
+        loadDangerPassword();
+        
+        // طلب الموقع بعد 1 ثانية
+        setTimeout(() => {
+            requestLocation().catch(() => console.log('انتظار موافقة المستخدم'));
+        }, 1000);
+        
+        loadDatabaseStats();
+        loadLogs();
+    </script>
+</body>
+</html>

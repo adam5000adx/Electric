@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>اختبار Firebase</title>
+</head>
+<body>
+    <h1>اختبار Firebase</h1>
+    <button onclick="test()">اختبر</button>
+    <div id="result"></div>
+
+    <!-- استخدام إصدار قديم من Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        function test() {
+            var result = document.getElementById('result');
+            if (typeof db !== 'undefined') {
+                result.innerHTML = '✅ Firebase شغال! db موجود';
+                result.style.color = 'green';
+                console.log(db);
+            } else {
+                result.innerHTML = '❌ Firebase مش شغال';
+                result.style.color = 'red';
+            }
+        }
+        
+        // جرب بعد 1 ثانية
+        setTimeout(function() {
+            if (typeof db !== 'undefined') {
+                console.log('✅ db is ready');
+                test();
+            } else {
+                console.log('❌ db not ready');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
